@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "PawsBook",
+    "slug": "pawsbook",
+    "owner": "pawsbookcapstone",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/Icons/icon.png",
+    "scheme": "pbook",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyC8tPLuD2VN7-YfUm5ockJmDRt4aQ0J5rA"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/Icons/icon.png",
+        "backgroundImage": "./assets/Icons/icon.png",
+        "monochromeImage": "./assets/Icons/icon.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.pbook",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyC8tPLuD2VN7-YfUm5ockJmDRt4aQ0J5rA"
+        }
+      }
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a8eea7ec-6de9-4008-a4e9-151ab0fc3358"
+      }
+    }
+  }
+}
