@@ -20,13 +20,13 @@ import {
 import { db } from "./firebase";
 
 
-const collectionName = (path: string, ...pathSegments: string[]) => whereMainProcess(false, [], path, ...pathSegments)
-const collectionGroupName = (path: string) => whereMainProcess(true, [], path)
+const collectionName = (path: string, ...pathSegments: string[]) => whereMainProcess(false, [], path, pathSegments)
+const collectionGroupName = (path: string) => whereMainProcess(true, [], path, [])
 
-const whereMainProcess = (group:boolean, whereCond: QueryConstraint[], path: string, ...pathSegments: string[]) => {
+const whereMainProcess = (group:boolean, whereCond: QueryConstraint[], path: string, pathSegments: string[]) => {
   const proccess = (key:string, condition:WhereFilterOp, value: any) => {
     whereCond.push(where(key, condition, value))
-    return whereMainProcess(group, whereCond, path, ...pathSegments)
+    return whereMainProcess(group, whereCond, path, pathSegments)
   }
   
   return {
@@ -43,15 +43,15 @@ const whereMainProcess = (group:boolean, whereCond: QueryConstraint[], path: str
     whereArrayContainsAny: (key:string, value: any) => proccess(key, "array-contains-any", value),
     orderBy: (key:string) => {
       whereCond.push(orderBy(key))
-      return whereMainProcess(group, whereCond, path, ...pathSegments)
+      return whereMainProcess(group, whereCond, path, pathSegments)
     },
     orderByDesc: (key:string) => {
       whereCond.push(orderBy(key,'desc'))
-      return whereMainProcess(group, whereCond, path, ...pathSegments)
+      return whereMainProcess(group, whereCond, path, pathSegments)
     },
     limit: (total:number) => {
       whereCond.push(limit(total))
-      return whereMainProcess(group, whereCond, path, ...pathSegments)
+      return whereMainProcess(group, whereCond, path, pathSegments)
     },
     count: async () => (whereCond.length > 0
       ? await getCountFromServer(query(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments), ...whereCond)) 
@@ -60,11 +60,11 @@ const whereMainProcess = (group:boolean, whereCond: QueryConstraint[], path: str
     get: async () => (whereCond.length > 0) 
       ? await getDocs(query(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments), ...whereCond)) 
       : await getDocs(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments)),
-    getMapped: async (func?: (id:string, data: any) => any) => 
+    getMapped: async (mapper?: (id:string, data: any) => any) => 
       ((whereCond.length > 0) 
         ? await getDocs(query(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments), ...whereCond)) 
         : await getDocs(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments))
-      ).docs.map(res => func ? func(res.id, res.data()) : ({id:res.id, ...res.data()}))
+      ).docs.map(res => mapper ? mapper(res.id, res.data()) : ({id:res.id, ...res.data()}))
   }
 } 
 

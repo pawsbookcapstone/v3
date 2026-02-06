@@ -20,54 +20,6 @@ import {
   View,
 } from "react-native";
 
-type Appointment = {
-  id: string;
-  type: "Vet" | "Groomer";
-  petName: string;
-  date: string;
-  time: string;
-  status: "Upcoming" | "Completed" | "Cancelled";
-  providerName: string;
-  providerAvatar?: string;
-  location: string;
-};
-
-const dummyAppointments: Appointment[] = [
-  {
-    id: "1",
-    type: "Vet",
-    petName: "Buddy",
-    date: "2025-10-10",
-    time: "10:00 AM",
-    status: "Upcoming",
-    providerName: "Happy Paws Clinic",
-    providerAvatar: "https://i.pravatar.cc/150?img=1",
-    location: "123 Main St, City",
-  },
-  {
-    id: "2",
-    type: "Groomer",
-    petName: "Mittens",
-    date: "2025-10-12",
-    time: "2:00 PM",
-    status: "Upcoming",
-    providerName: "Furry Friends Grooming",
-    providerAvatar: "https://i.pravatar.cc/150?img=2",
-    location: "456 Oak Ave, City",
-  },
-  {
-    id: "3",
-    type: "Vet",
-    petName: "Charlie",
-    date: "2025-10-05",
-    time: "1:00 PM",
-    status: "Completed",
-    providerName: "Healthy Pets Vet",
-    providerAvatar: "https://i.pravatar.cc/150?img=3",
-    location: "789 Pine Rd, City",
-  },
-];
-
 const cancellationReasons = [
   "Pet is sick",
   "Schedule conflict",
@@ -83,7 +35,7 @@ const Appointment = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<any>([]);
   const [search, setSearch] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<
@@ -113,6 +65,7 @@ const Appointment = () => {
   //bagong code
   const onRefresh = async () => {
     setRefreshing(true);
+    setIsLoading(true)
     try {
       const snapshot = await all("appointments");
       const data = snapshot.docs.map((doc) => {
@@ -126,52 +79,28 @@ const Appointment = () => {
             : "",
           time: d.selectedTime || "",
           status: d.status,
+          providerId: d.providerId,
           providerName: d.providerName,
-          providerAvatar: d.providerAvatar,
+          providerImage: d.providerImage,
           location: d.location || "To be confirmed",
         };
       });
+      console.log({data});
+      
       setAppointments(data);
     } catch (error) {
       console.error("Failed to refresh appointments:", error);
     } finally {
       setRefreshing(false);
+      setIsLoading(false)
     }
   };
 
   React.useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setIsLoading(true);
-        const snapshot = await all("appointments"); // get all appointments
-        const data = snapshot.docs.map((doc) => {
-          const d = doc.data() as any;
-          return {
-            id: doc.id,
-            type: d.type,
-            petName: d.petName,
-            date: d.selectedDate
-              ? new Date(d.selectedDate.seconds * 1000).toDateString()
-              : "",
-            time: d.selectedTime || "",
-            status: d.status,
-            providerName: d.providerName,
-            providerAvatar: d.providerAvatar,
-            location: d.location || "To be confirmed",
-          };
-        });
-        setAppointments(data);
-      } catch (error) {
-        console.error("Failed to fetch appointments:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAppointments();
+    onRefresh()
   }, []);
 
-  const filteredAppointments = appointments.filter((a) => {
+  const filteredAppointments = appointments.filter((a:any) => {
     const matchesSearch =
       a.petName.toLowerCase().includes(search.toLowerCase()) ||
       a.providerName.toLowerCase().includes(search.toLowerCase());
@@ -185,13 +114,13 @@ const Appointment = () => {
     if (!selectedAppointmentId) return;
 
     try {
-      await update("appointments", selectedAppointmentId).value({
+      update("appointments", selectedAppointmentId).value({
         status: "Cancelled",
         cancellationReason: reason,
       });
 
-      setAppointments((prev) =>
-        prev.map((a) =>
+      setAppointments((prev:any) =>
+        prev.map((a:any) =>
           a.id === selectedAppointmentId ? { ...a, status: "Cancelled" } : a,
         ),
       );
@@ -216,7 +145,7 @@ const Appointment = () => {
   //   }
   // };
 
-  const renderItem = ({ item }: { item: Appointment }) => (
+  const renderItem = ({ item }: { item: any }) => (
     <Pressable
       onPress={() =>
         router.push({
@@ -228,8 +157,9 @@ const Appointment = () => {
             date: item.date,
             time: item.time,
             status: item.status,
+            providerId: item.providerId,
             providerName: item.providerName,
-            providerAvatar: item.providerAvatar,
+            providerImage: item.providerImage,
             location: item.location,
           },
         })
@@ -278,7 +208,7 @@ const Appointment = () => {
         >
           <Image
             source={{
-              uri: item.providerAvatar || "https://via.placeholder.com/50",
+              uri: item.providerImage || "https://via.placeholder.com/50",
             }}
             style={styles.avatar}
           />
@@ -335,6 +265,7 @@ const Appointment = () => {
             <Pressable
               style={[styles.cancelButton, ShadowStyle]}
               onPress={() => {
+                setSelectedReason(null)
                 setSelectedAppointmentId(item.id);
                 setModalVisible(true);
               }}
@@ -349,9 +280,9 @@ const Appointment = () => {
               router.push({
                 pathname: "/pet-owner/(chat)/chat-field",
                 params: {
-                  id: item.id,
-                  name: item.providerName,
-                  avatar: item.providerAvatar,
+                  otherUserId: item.providerId,
+                  otherUserName: item.providerName,
+                  otherUserImgPath: item.providerImage,
                 },
               })
             }
@@ -494,6 +425,7 @@ const Appointment = () => {
               style={[styles.nextButton, !selectedReason && { opacity: 0.5 }]}
               disabled={!selectedReason}
               onPress={() => {
+                setModalVisible(false)
                 setConfirmVisible(true);
               }}
             >
@@ -565,8 +497,8 @@ const Appointment = () => {
                 }}
                 onPress={() => {
                   if (selectedAppointmentId && selectedReason) {
-                    setAppointments((prev) =>
-                      prev.map((a) =>
+                    setAppointments((prev:any) =>
+                      prev.map((a:any) =>
                         a.id === selectedAppointmentId
                           ? { ...a, status: "Cancelled" }
                           : a,

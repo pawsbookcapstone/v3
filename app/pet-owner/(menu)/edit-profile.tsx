@@ -207,19 +207,11 @@ const EditProfile = () => {
             <View style={styles.formContainer}>
               {profile.is_page ? (
                 <>
-                <Text style={styles.label}>Page Name*</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profile.firstname}
-                  onChangeText={(text) => handleChange("firstname", text)}
-                />
-                  {/* Address Input */}
-                  <Text style={styles.label}>Address*</Text>
+                  <Text style={styles.label}>Page Name*</Text>
                   <TextInput
                     style={styles.input}
-                    value={profile.address}
-                    onChangeText={(text) => handleChange("address", text)}
-                    placeholder="Enter business address"
+                    value={profile.firstname}
+                    onChangeText={(text) => handleChange("firstname", text)}
                   />
 
                   {/* Open / Closed Toggle */}
@@ -286,6 +278,15 @@ const EditProfile = () => {
                 value={profile.email as string}
                 onChangeText={(text) => handleChange("email", text)}
                 keyboardType="email-address"
+              />
+
+              {/* Address Input */}
+              <Text style={styles.label}>Address*</Text>
+              <TextInput
+                style={styles.input}
+                value={profile.address}
+                onChangeText={(text) => handleChange("address", text)}
+                placeholder="Enter business address"
               />
 
               <Text style={styles.label}>Phone*</Text>
@@ -480,7 +481,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 13,
     alignItems: "center",
-    marginTop: 70,
+    marginTop: 30,
   },
   saveButtonText: {
     color: Colors.white,

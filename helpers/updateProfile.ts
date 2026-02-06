@@ -162,5 +162,19 @@ export async function updateUserProfile(
     );
   });
 
+
+  const appointmentSnap = await getDocs(
+    query(collection(db, "appointments"), where("creator_id", "==", userId)),
+  );
+
+  appointmentSnap.forEach((docSnap) => {
+    ops.push((batch) =>
+      batch.update(docSnap.ref, {
+        creator_name: newName,
+        creator_img_path: newImage,
+      }),
+    );
+  });
+
   await commitBatches(ops);
 }

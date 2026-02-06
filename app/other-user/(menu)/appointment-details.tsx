@@ -1,3 +1,4 @@
+import { update } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -19,10 +20,30 @@ const AppointmentDetails = () => {
   const [showDeclineModal, setShowDeclineModal] = useState(false);
 
   const handleConfirmDecline = () => {
+    const id:string = params.id.toString()
+    
+    update("appointments", id).value({status:"Cancelled"})
+
     setShowDeclineModal(false);
+    router.back()
     // You can handle your decline logic here, e.g. API call or state update
     console.log("Appointment declined!");
   };
+
+  const handleConfirm = () => {
+    const id:string = params.id.toString()
+    
+    update("appointments", id).value({status:"Completed"})
+
+    router.push({
+      pathname: "/pet-owner/(chat)/chat-field",
+      params: {
+        otherUserId: params.creator_id,
+        otherUserName: params.creator_name,
+        otherUserImgPath: params.creator_img_path,
+      },
+    })
+  }
 
   return (
     <View style={screens.screen}>
@@ -115,6 +136,8 @@ const AppointmentDetails = () => {
       </View>
 
       {/* Action Buttons */}
+      {
+        params.status === "Upcoming" && 
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={styles.cancelButton}
@@ -125,15 +148,7 @@ const AppointmentDetails = () => {
 
         <TouchableOpacity
           style={styles.confirmButton}
-          onPress={() =>
-            router.push({
-              pathname: "/pet-owner/(chat)/chat-field",
-              params: {
-                id: params.id,
-                name: params.providerName,
-                avatar: params.providerAvatar,
-              },
-            })
+          onPress={handleConfirm
           }
         >
           <Ionicons
@@ -144,6 +159,7 @@ const AppointmentDetails = () => {
           <Text style={styles.confirmText}>Confirm Appointment</Text>
         </TouchableOpacity>
       </View>
+      }
 
       {/* Decline Confirmation Modal */}
       <Modal

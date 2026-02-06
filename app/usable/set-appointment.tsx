@@ -1,3 +1,4 @@
+import { useAppContext } from "@/AppsProvider";
 import { add, serverTimestamp } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -16,13 +17,13 @@ import {
 } from "react-native";
 
 const SetAppointment = () => {
-  const { name, type } = useLocalSearchParams();
+  const {userId, userName, userImagePath} = useAppContext()
 
   const [fullName, setFullName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>("8:00 AM");
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false); // <-- New state
 
@@ -54,7 +55,7 @@ const SetAppointment = () => {
     try {
       setLoading(true);
 
-      await add("appointments").value({
+     add("appointments").value({
         type: providerType,
         petName,
         selectedDate,
@@ -62,13 +63,18 @@ const SetAppointment = () => {
         status: "Upcoming",
         providerId,
         providerName,
-        providerAvatar: providerImage,
+        providerImage,
         location: "To be confirmed",
         createdAt: serverTimestamp(),
+        creator_id: userId,
+        creator_name: userName,
+        creator_img_path: userImagePath
         // ownerId: user.uid   // add later if needed
       });
 
-      router.replace("/pet-owner/(menu)/appointment");
+      // router.replace("/pet-owner/(menu)/appointment");
+      router.back();
+      router.back();
     } catch (error) {
       console.error("Failed to create appointment:", error);
       alert("Something went wrong. Please try again.");

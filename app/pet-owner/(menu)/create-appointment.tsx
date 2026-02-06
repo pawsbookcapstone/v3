@@ -1,10 +1,11 @@
+import { collectionName } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   Image,
@@ -15,59 +16,35 @@ import {
   View,
 } from "react-native";
 
-type TProviders = {
-  id: string;
-  name: string;
-  type: string;
-  image: string;
-};
-
-const dummyProviders: TProviders[] = [
-  {
-    id: "1",
-    name: "Happy Paws Veterinary Clinic",
-    type: "Veterinarian",
-    image:
-      "https://images.unsplash.com/photo-1612831455543-43a0b47c923e?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "2",
-    name: "FurEver Grooming Hub",
-    type: "Groomer",
-    image:
-      "https://images.unsplash.com/photo-1601758123927-1965c9b7a4b1?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "3",
-    name: "Pawsitive Training Center",
-    type: "Trainer",
-    image:
-      "https://images.unsplash.com/photo-1598133894008-1a94c7dd6c4c?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: "4",
-    name: "Healthy Tails Pet Spa",
-    type: "Groomer",
-    image:
-      "https://images.unsplash.com/photo-1592194996308-7b43878e84a6?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
 const CreateAppointment = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [pages, setPages] = useState<any>([])
 
-  const filteredProviders = dummyProviders.filter((provider) =>
-    provider.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  useEffect(() => {
+    collectionName("users")
+      .whereEquals("is_page", true)
+      .whereNotEquals("allow_appointments", false)
+      .getMapped((_, data) => ({
+        id: data.id,
+        name: data.firstname,
+        img_path: data.img_path,
+        type: data.categories.join(", ")
+      }))
+      .then(res => setPages(res))
+  }, [])
+
+  const filteredPages = pages.filter((page:any) =>
+    page.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-  const handleAppointment = (provider: TProviders) => {
-    // Navigate to set-appointment and pass provider data
+  const handleAppointment = (page:any) => {
+    // Navigate to set-appointment and pass page data
     router.push({
       pathname: "/usable/set-appointment",
       params: {
-        providerId: provider.id,
-        providerName: provider.name,
-        providerType: provider.type,
-        providerImage: provider.image,
+        providerId: page.id,
+        providerName: page.name,
+        providerType: page.type,
+        providerImage: page.img_path,
       },
     });
   };
@@ -95,7 +72,7 @@ const CreateAppointment = () => {
 
       {/* Provider List */}
       <FlatList
-        data={filteredProviders}
+        data={filteredPages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
@@ -104,7 +81,7 @@ const CreateAppointment = () => {
             onPress={() => handleAppointment(item)}
           >
             {/* ${item.id} */}
-            <Image source={{ uri: item.image }} style={styles.image} />
+            <Image source={{ uri: item.img_path }} style={styles.image} />
             <View style={styles.cardContent}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.type}>{item.type}</Text>

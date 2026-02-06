@@ -10,6 +10,10 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 const AppointmentDetails = () => {
   const params = useLocalSearchParams();
 
+  // const onCancel = () => {
+  //   update("app")
+  // }
+
   return (
     <View style={[screens.screen, { backgroundColor: "#F7F8FA" }]}>
       <HeaderLayout noBorderRadius bottomBorder>
@@ -106,20 +110,20 @@ const AppointmentDetails = () => {
 
       {/* Action Buttons */}
       <View style={styles.actionsContainer}>
-        {params.status === "Upcoming" && (
-          <TouchableOpacity style={styles.cancelButton}>
+        {/* {params.status === "Upcoming" && (
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
             <Text style={styles.cancelText}>Cancel Appointment</Text>
           </TouchableOpacity>
-        )}
+        )} */}
         <TouchableOpacity
           style={styles.messageButton}
           onPress={() =>
             router.push({
               pathname: "/pet-owner/(chat)/chat-field",
               params: {
-                id: params.id,
-                name: params.providerName,
-                avatar: params.providerAvatar,
+                otherUserId: params.providerId,
+                otherUserName: params.providerName,
+                otherUserImgPath: params.providerImage,
               },
             })
           }

@@ -1,3 +1,5 @@
+import { useAppContext } from "@/AppsProvider";
+import { collectionName, update } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
 import { AppointmentSkeleton } from "@/shared/components/AppointmentSkeletal";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -76,10 +78,12 @@ const dummyAppointments: Appointment[] = [
 const tabs = ["All", "Upcoming", "Completed", "Cancelled"];
 
 const Appointment = () => {
+  const {userId} = useAppContext()
+
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [appointments, setAppointments] = useState(dummyAppointments);
+  const [appointments, setAppointments] = useState<any>([]);
   const [search, setSearch] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<
@@ -87,26 +91,28 @@ const Appointment = () => {
   >(null);
   const [activeTab, setActiveTab] = useState("All");
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
     setIsLoading(true);
-    setTimeout(() => {
-      setAppointments(dummyAppointments);
+    
+    try{
+      const _appointments = await collectionName("appointments")
+        .whereEquals("providerId", userId)
+        .getMapped()
+      setAppointments(_appointments)
+    } finally{
       setRefreshing(false);
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    onRefresh()
   }, []);
 
-  const filteredAppointments = appointments.filter((a) => {
+  const filteredAppointments = appointments.filter((a:any) => {
     const matchesSearch =
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.creator_name.toLowerCase().includes(search.toLowerCase()) ||
       a.petName.toLowerCase().includes(search.toLowerCase());
 
     const matchesTab = activeTab === "All" ? true : a.status === activeTab;
@@ -116,18 +122,34 @@ const Appointment = () => {
 
   const handleConfirmDecline = (reason?: string) => {
     if (selectedAppointmentId) {
-      setAppointments((prev) =>
-        prev.map((a) =>
+      setAppointments((prev:any) =>
+        prev.map((a:any) =>
           a.id === selectedAppointmentId ? { ...a, status: "Cancelled" } : a
         )
       );
+
+      update("appointments", selectedAppointmentId).value({
+        status: "Cancelled"
+      })
       setSelectedAppointmentId(null);
       setModalVisible(false);
       console.log("Cancelled for reason:", reason || "No reason provided");
     }
   };
 
-  const renderItem = ({ item }: { item: Appointment }) => (
+  const handleConfirm = (id:string) => {
+    setAppointments((prev:any) =>
+      prev.map((a:any) =>
+        a.id === id ? { ...a, status: "Completed" } : a
+      )
+    );
+
+    update("appointments", id).value({
+      status: "Completed"
+    })
+  }
+
+  const renderItem = ({ item }: { item: any }) => (
     <Pressable
       onPress={() =>
         router.push({
@@ -135,13 +157,16 @@ const Appointment = () => {
           params: {
             id: item.id,
             type: item.type,
-            name: item.name,
-            date: item.date,
-            time: item.time,
+            name: item.providerName,
+            date: item.selectedDate.toDate().toDateString(),
+            time: item.selectedTime,
             status: item.status,
             petName: item.petName,
-            providerAvatar: item.Avatar,
+            providerAvatar: item.providerImage,
             location: item.location,
+            creator_id: item.creator_id,
+            creator_name: item.creator_name,
+            creator_img_path: item.creator_img_path,
           },
         })
       }
@@ -181,7 +206,7 @@ const Appointment = () => {
         >
           <Image
             source={{
-              uri: item.Avatar || "https://via.placeholder.com/50",
+              uri: item.creator_img_path || "https://via.placeholder.com/50",
             }}
             style={styles.avatar}
           />
@@ -199,7 +224,7 @@ const Appointment = () => {
                 color={Colors.gray}
                 style={{ marginRight: 6 }}
               />
-              <Text style={styles.providerName}>{item.name}</Text>
+              <Text style={styles.providerName}>{item.creator_name}</Text>
             </View>
             <View
               style={{
@@ -220,7 +245,7 @@ const Appointment = () => {
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.location}>
-                {item.date} at {item.time}
+                {item.selectedDate.toDate().toDateString()} at {item.selectedTime}
               </Text>
             </View>
           </View>
@@ -241,13 +266,7 @@ const Appointment = () => {
 
               <Pressable
                 style={[styles.messageButton, ShadowStyle]}
-                onPress={() => {
-                  setAppointments((prev) =>
-                    prev.map((a) =>
-                      a.id === item.id ? { ...a, status: "Completed" } : a
-                    )
-                  );
-                }}
+                onPress={() => handleConfirm(item.id)}
               >
                 <Text style={styles.messageText}>Confirm</Text>
               </Pressable>

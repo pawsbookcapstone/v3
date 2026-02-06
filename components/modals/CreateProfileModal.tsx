@@ -112,7 +112,7 @@ const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
       setUserFirstName(profile.name)
       setUserLastName("")
 
-      // router.push('/other-user/home')
+      router.replace('/pet-owner/home')
       return
     }
 
@@ -122,6 +122,8 @@ const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
       setUserFirstName(pageCreator.firstname)
       setUserLastName(pageCreator.lastname)
       setPageCreator(null)
+
+      router.replace('/pet-owner/home')
       return
     }
 
