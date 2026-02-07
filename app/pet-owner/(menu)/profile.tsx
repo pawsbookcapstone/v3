@@ -37,19 +37,112 @@ const Profile = () => {
 
   const [posts, setPosts] = useState<any>([]);
 
+  // useEffect(() => {
+  //   const fetchProfile = async () => {
+  //     const snap = await find("users", userId);
+  //     const data: any = snap.data();
+  //     setProfile(data);
+
+  //     const friendsSnap = await get("friends").where(
+  //       where("users", "array-contains", userId),
+  //       where("confirmed", "==", true),
+  //       limit(6)
+  //     );
+
+  //     const _friends = friendsSnap.docs.map((f) => {
+  //       const d = f.data();
+  //       const otherUserId = d.users[0] === userId ? d.users[1] : d.users[0];
+  //       return {
+  //         id: f.id,
+  //         user_id: otherUserId,
+  //         ...d.details[otherUserId],
+  //       };
+  //     });
+  //     setFriends(_friends);
+
+  //     if (_friends.length < 6) {
+  //       setFriendsCount(_friends.length);
+  //     } else {
+  //       const _count = await count("friends").where(
+  //         where("users", "array-contains", userId),
+  //         where("confirmed", "==", true)
+  //       );
+  //       setFriendsCount(_count);
+  //     }
+
+  //     const postsSnap = await get("posts").where(
+  //       where("creator_id", "==", userId),
+  //       orderBy("date", "desc")
+  //     );
+  //     const _posts: any = [];
+
+  //     for (const i in postsSnap.docs) {
+  //       const dc = postsSnap.docs[i];
+  //       const d = dc.data();
+
+  //       let shared = null
+  //       if (d.shared_post_id){
+  //         const shareSnap = await find('posts', d.shared_post_id)
+  //         shared = shareSnap.data()
+  //       }
+
+  //       const commentSnap = await all("posts", dc.id, "comments");
+  //       _posts.push({
+  //         id: dc.id,
+  //         ...d,
+  //         liked: Array.isArray(d.liked_by_ids)
+  //           ? d.liked_by_ids.includes(userId)
+  //           : false,
+  //         showComments: false,
+  //         shared:shared,
+  //         comments: commentSnap.docs.map((_comment: any) => ({
+  //           id: _comment.id,
+  //           ..._comment.data(),
+  //         })),
+  //         date_ago: computeTimePassed(d.date.toDate()),
+  //       });
+  //     }
+
+  //     setPosts(_posts);
+
+  //     setLoading(false);
+  //   };
+
+  //   fetchProfile();
+  // }, []);
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      const snap = await find("users", userId);
-      const data: any = snap.data();
-      setProfile(data);
+  let mounted = true;
 
-      const friendsSnap = await get("friends").where(
-        where("users", "array-contains", userId),
-        where("confirmed", "==", true),
-        limit(6)
-      );
+  const fetchProfile = async () => {
+    setLoading(true);
 
-      const _friends = friendsSnap.docs.map((f) => {
+    try {
+      /** =========================
+       *  1️⃣ Parallel base queries
+       ========================== */
+      const [userSnap, friendsSnap, postsSnap] = await Promise.all([
+        find("users", userId),
+        get("friends").where(
+          where("users", "array-contains", userId),
+          where("confirmed", "==", true),
+          limit(6)
+        ),
+        get("posts").where(
+          where("creator_id", "==", userId),
+          orderBy("date", "desc")
+        ),
+      ]);
+
+      if (!mounted) return;
+
+      const profileData: any = userSnap.data();
+      setProfile(profileData);
+
+      /** =========================
+       *  2️⃣ Friends list + count
+       ========================== */
+      const _friends = friendsSnap.docs.map(f => {
         const d = f.data();
         const otherUserId = d.users[0] === userId ? d.users[1] : d.users[0];
         return {
@@ -58,6 +151,7 @@ const Profile = () => {
           ...d.details[otherUserId],
         };
       });
+
       setFriends(_friends);
 
       if (_friends.length < 6) {
@@ -70,46 +164,51 @@ const Profile = () => {
         setFriendsCount(_count);
       }
 
-      const postsSnap = await get("posts").where(
-        where("creator_id", "==", userId),
-        orderBy("date", "desc")
+      /** =========================
+       *  3️⃣ Optimize posts (parallel shared + comments)
+       ========================== */
+      const _posts = await Promise.all(
+        postsSnap.docs.map(async dc => {
+          const d = dc.data();
+
+          // fetch shared post + comments in parallel
+          const [sharedSnap, commentSnap] = await Promise.all([
+            d.shared_post_id ? find("posts", d.shared_post_id) : Promise.resolve(null),
+            all("posts", dc.id, "comments")
+          ]);
+
+          return {
+            id: dc.id,
+            ...d,
+            liked: Array.isArray(d.liked_by_ids) ? d.liked_by_ids.includes(userId) : false,
+            showComments: false,
+            shared: sharedSnap?.data() ?? null,
+            comments: commentSnap.docs.map(c => ({
+              id: c.id,
+              ...c.data()
+            })),
+            date_ago: computeTimePassed(d.date.toDate())
+          };
+        })
       );
-      const _posts: any = [];
 
-      for (const i in postsSnap.docs) {
-        const dc = postsSnap.docs[i];
-        const d = dc.data();
-
-        let shared = null
-        if (d.shared_post_id){
-          const shareSnap = await find('posts', d.shared_post_id)
-          shared = shareSnap.data()
-        }
-
-        const commentSnap = await all("posts", dc.id, "comments");
-        _posts.push({
-          id: dc.id,
-          ...d,
-          liked: Array.isArray(d.liked_by_ids)
-            ? d.liked_by_ids.includes(userId)
-            : false,
-          showComments: false,
-          shared:shared,
-          comments: commentSnap.docs.map((_comment: any) => ({
-            id: _comment.id,
-            ..._comment.data(),
-          })),
-          date_ago: computeTimePassed(d.date.toDate()),
-        });
-      }
-
+      if (!mounted) return;
       setPosts(_posts);
 
-      setLoading(false);
-    };
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  };
 
-    fetchProfile();
-  }, []);
+  fetchProfile();
+
+  return () => {
+    mounted = false;
+  };
+}, []);
+
 
   // const dummyprofile = {
   //   profile_photo: profile as string,

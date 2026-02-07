@@ -57,102 +57,225 @@ const Profile = () => {
 
   const addNotif = useNotifHook()
 
+  // useEffect(() => {
+  //   const fetch = async () => {
+  //     setLoading(true);
+
+  //     const snap = await find("users", userToViewId);
+  //     const data: any = snap.data();
+  //     setProfile(data);
+
+  //     const bsnap = await find("users", userId, "blocked_users", userToViewId)
+  //     setBlocked(bsnap.exists())
+
+  //     if (data.is_page){
+        
+  //     }
+  //     else {
+  //       const usnap = await find("friends", generateChatId(userId, userToViewId))
+  //       if (usnap.exists()){
+  //         const d = usnap.data()
+  //         if (d.confirmed)
+  //           setFriendStatus("Friend")
+  //         else{
+  //           if (d.users[0] === userId)
+  //             setFriendStatus("Your Request")
+  //           else
+  //             setFriendStatus("Other Request")
+  //         }
+  //       }
+        
+  //       const friendsSnap = await get("friends").where(
+  //         where("users", "array-contains", userToViewId),
+  //         where("confirmed", "==", true),
+  //         limit(6),
+  //       );
+  
+  //       const _friends = friendsSnap.docs.map((f) => {
+  //         const d = f.data();
+  //         const otherUserId =
+  //           d.users[0] === userToViewId ? d.users[1] : d.users[0];
+  //         return {
+  //           id: f.id,
+  //           user_id: otherUserId,
+  //           ...d.details[otherUserId],
+  //         };
+  //       });
+  //       setFriends(_friends);
+  
+  //       if (_friends.length < 6) {
+  //         setFriendsCount(_friends.length);
+  //       } else {
+  //         const _count = await count("friends").where(
+  //           where("users", "array-contains", userToViewId),
+  //           where("confirmed", "==", true),
+  //         );
+  //         setFriendsCount(_count);
+  //       }
+  //     }
+
+  //     const postsSnap = await get("posts").where(
+  //       where("creator_id", "==", userToViewId),
+  //       orderBy("date", "desc"),
+  //     );
+  //     const _posts: any = [];
+
+  //     for (const i in postsSnap.docs) {
+  //       const dc = postsSnap.docs[i];
+  //       const d = dc.data();
+
+  //       let shared = null
+  //       if (d.shared_post_id){
+  //         const shareSnap = await find('posts', d.shared_post_id)
+  //         shared = shareSnap.data()
+  //       }
+
+  //       const commentSnap = await all("posts", dc.id, "comments");
+  //       _posts.push({
+  //         id: dc.id,
+  //         ...d,
+  //         liked: Array.isArray(d.liked_by_ids)
+  //           ? d.liked_by_ids.includes(userId)
+  //           : false,
+  //         showComments: false,
+  //         shared:shared,
+  //         comments: commentSnap.docs.map((_comment: any) => ({
+  //           id: _comment.id,
+  //           ..._comment.data(),
+  //         })),
+  //         date_ago: computeTimePassed(d.date.toDate()),
+  //       });
+  //     }
+
+  //     setPosts(_posts);
+
+  //     setLoading(false);
+  //   };
+  //   fetch();
+  // }, []);
+
   useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
+  let mounted = true;
 
-      const snap = await find("users", userToViewId);
-      const data: any = snap.data();
-      setProfile(data);
+  const fetch = async () => {
+    setLoading(true);
 
-      const bsnap = await find("users", userId, "blocked_users", userToViewId)
-      setBlocked(bsnap.exists())
+    try {
+      /** =========================
+       *  PARALLEL BASE QUERIES
+       ========================== */
+      const [
+        userSnap,
+        blockSnap,
+        postsSnap,
+      ] = await Promise.all([
+        find("users", userToViewId),
+        find("users", userId, "blocked_users", userToViewId),
+        get("posts").where(
+          where("creator_id", "==", userToViewId),
+          orderBy("date", "desc")
+        ),
+      ]);
 
-      if (data.is_page){
-        
-      }
-      else {
-        const usnap = await find("friends", generateChatId(userId, userToViewId))
-        if (usnap.exists()){
-          const d = usnap.data()
-          if (d.confirmed)
-            setFriendStatus("Friend")
-          else{
-            if (d.users[0] === userId)
-              setFriendStatus("Your Request")
-            else
-              setFriendStatus("Other Request")
-          }
+      if (!mounted) return;
+
+      const profileData: any = userSnap.data();
+      setProfile(profileData);
+      setBlocked(blockSnap.exists());
+
+      /** =========================
+       *  FRIEND / PAGE LOGIC
+       ========================== */
+      if (!profileData.is_page) {
+        const chatId = generateChatId(userId, userToViewId);
+
+        const friendSnap = await find("friends", chatId);
+
+        if (friendSnap.exists()) {
+          const d = friendSnap.data();
+          if (d.confirmed) setFriendStatus("Friend");
+          else if (d.users[0] === userId) setFriendStatus("Your Request");
+          else setFriendStatus("Other Request");
         }
-        
+
         const friendsSnap = await get("friends").where(
           where("users", "array-contains", userToViewId),
           where("confirmed", "==", true),
-          limit(6),
+          limit(6)
         );
-  
-        const _friends = friendsSnap.docs.map((f) => {
+
+        const friends = friendsSnap.docs.map(f => {
           const d = f.data();
-          const otherUserId =
+          const otherId =
             d.users[0] === userToViewId ? d.users[1] : d.users[0];
+
           return {
             id: f.id,
-            user_id: otherUserId,
-            ...d.details[otherUserId],
+            user_id: otherId,
+            ...d.details?.[otherId],
           };
         });
-        setFriends(_friends);
-  
-        if (_friends.length < 6) {
-          setFriendsCount(_friends.length);
+
+        setFriends(friends);
+
+        if (friends.length < 6) {
+          setFriendsCount(friends.length);
         } else {
-          const _count = await count("friends").where(
+          const countSnap = await count("friends").where(
             where("users", "array-contains", userToViewId),
-            where("confirmed", "==", true),
+            where("confirmed", "==", true)
           );
-          setFriendsCount(_count);
+          setFriendsCount(countSnap);
         }
       }
 
-      const postsSnap = await get("posts").where(
-        where("creator_id", "==", userToViewId),
-        orderBy("date", "desc"),
+      /** =========================
+       *  POSTS OPTIMIZATION
+       ========================== */
+      const posts = await Promise.all(
+        postsSnap.docs.map(async dc => {
+          const d = dc.data();
+
+          const [sharedSnap, commentsSnap] = await Promise.all([
+            d.shared_post_id
+              ? find("posts", d.shared_post_id)
+              : Promise.resolve(null),
+            all("posts", dc.id, "comments"),
+          ]);
+
+          return {
+            id: dc.id,
+            ...d,
+            liked: Array.isArray(d.liked_by_ids)
+              ? d.liked_by_ids.includes(userId)
+              : false,
+            showComments: false,
+            shared: sharedSnap?.data() ?? null,
+            comments: commentsSnap.docs.map(c => ({
+              id: c.id,
+              ...c.data(),
+            })),
+            date_ago: computeTimePassed(d.date.toDate()),
+          };
+        })
       );
-      const _posts: any = [];
 
-      for (const i in postsSnap.docs) {
-        const dc = postsSnap.docs[i];
-        const d = dc.data();
+      if (mounted) setPosts(posts);
 
-        let shared = null
-        if (d.shared_post_id){
-          const shareSnap = await find('posts', d.shared_post_id)
-          shared = shareSnap.data()
-        }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  };
 
-        const commentSnap = await all("posts", dc.id, "comments");
-        _posts.push({
-          id: dc.id,
-          ...d,
-          liked: Array.isArray(d.liked_by_ids)
-            ? d.liked_by_ids.includes(userId)
-            : false,
-          showComments: false,
-          shared:shared,
-          comments: commentSnap.docs.map((_comment: any) => ({
-            id: _comment.id,
-            ..._comment.data(),
-          })),
-          date_ago: computeTimePassed(d.date.toDate()),
-        });
-      }
+  fetch();
 
-      setPosts(_posts);
+  return () => {
+    mounted = false;
+  };
+}, []);
 
-      setLoading(false);
-    };
-    fetch();
-  }, []);
 
   const openImageModal = (images: string[], index: number) => {
     setSelectedPostImages(images);
