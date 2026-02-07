@@ -19,7 +19,7 @@ import {
   TextInput,
   ToastAndroid,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const myProfileImage = "https://randomuser.me/api/portraits/men/32.jpg";
@@ -32,7 +32,7 @@ const dummyPets = [
 ];
 
 const SharePost = () => {
-  const {setFunc, userId, userName, userImagePath} = useAppContext()
+  const { setFunc, userId, userName, userImagePath } = useAppContext();
 
   const { post, taggedPets: taggedPetsParam } = useLocalSearchParams();
   const parsedPost = post ? JSON.parse(post as string) : null;
@@ -44,8 +44,8 @@ const SharePost = () => {
   const [selectedPets, setSelectedPets] = useState<string[]>([]);
   const [showExitModal, setShowExitModal] = useState(false);
 
-  const addNotif = useNotifHook()
-  const renderLoadingButton = useLoadingHook(true)
+  const addNotif = useNotifHook();
+  const renderLoadingButton = useLoadingHook(true);
 
   useEffect(() => {
     if (taggedPetsParam) {
@@ -70,7 +70,7 @@ const SharePost = () => {
     setSelectedPets((prev) =>
       prev.includes(petId)
         ? prev.filter((id) => id !== petId)
-        : [...prev, petId]
+        : [...prev, petId],
     );
   };
 
@@ -84,41 +84,41 @@ const SharePost = () => {
   };
 
   const handleShare = async () => {
-    if (!caption.trim()) throw "Please add some text."
+    if (!caption.trim()) throw "Please add some text.";
 
-      const sharedPostSnap = await find('posts', parsedPost.id)
-      const sharesCount = parseInt(sharedPostSnap.data()?.shares ?? 0) + 1
-      set('posts', parsedPost.id).value({
-        shares: sharesCount
-      })
+    const sharedPostSnap = await find("posts", parsedPost.id);
+    const sharesCount = parseInt(sharedPostSnap.data()?.shares ?? 0) + 1;
+    set("posts", parsedPost.id).value({
+      shares: sharesCount,
+    });
 
-      let data: any = {
-        creator_id: userId,
-        creator_name: userName,
-        creator_img_path: userImagePath ?? null,
-        body: caption.trim(),
-        date: serverTimestamp(),
-        shares: 0,
-        shared_post_id: parsedPost.id
-      };
+    let data: any = {
+      creator_id: userId,
+      creator_name: userName,
+      creator_img_path: userImagePath ?? null,
+      body: caption.trim(),
+      date: serverTimestamp(),
+      shares: 0,
+      shared_post_id: parsedPost.id,
+    };
 
-      if (taggedPets.length > 0) {
-        data.pets = taggedPets.map((p) => ({
-          name: p.name,
-          id: p.id,
-          img_path: p.img_path,
-        }));
-      }
+    if (taggedPets.length > 0) {
+      data.pets = taggedPets.map((p) => ({
+        name: p.name,
+        id: p.id,
+        img_path: p.img_path,
+      }));
+    }
 
-        await add("posts").value(data);
-        addNotif({
-          receiver_id: parsedPost.creator_id,
-          type: 'Share',
-          href: '/pet-owner/profile'
-        })
-        ToastAndroid.show("Post shared", ToastAndroid.SHORT);
+    await add("posts").value(data);
+    addNotif({
+      receiver_id: parsedPost.creator_id,
+      type: "Share",
+      href: "/pet-owner/profile",
+    });
+    ToastAndroid.show("Post shared", ToastAndroid.SHORT);
 
-      router.back();
+    router.back();
   };
 
   const handleBack = () => {
@@ -145,13 +145,10 @@ const SharePost = () => {
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {/* 🧍 Profile & Tag */}
         <View style={styles.profileRow}>
-          <Image source={{ uri: myProfileImage }} style={styles.avatar} />
+          <Image source={{ uri: userImagePath }} style={styles.avatar} />
           <View>
-            <Text style={styles.profileName}>{myProfileName}</Text>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={handleTag}
-            >
+            <Text style={styles.profileName}>{userName}</Text>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleTag}>
               <Entypo name="price-tag" size={18} color={Colors.primary} />
               <Text style={styles.actionText}>Tag Pets</Text>
             </TouchableOpacity>
@@ -171,19 +168,19 @@ const SharePost = () => {
         {/* 🐾 Tag Section */}
         <Text style={styles.sectionTitle}>Tagged Pets</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {taggedPets.map((pet) => 
-              <TouchableOpacity
-                key={pet.id}
-                style={[
-                  styles.petCard,
-                  { borderColor: Colors.primary, borderWidth: 2 },
-                ]}
-                onPress={() => togglePetTag(pet.id)}
-              >
-                <Image source={{ uri: pet.img_path }} style={styles.petImage} />
-                <Text style={styles.petName}>{pet.name}</Text>
-              </TouchableOpacity>
-            )}
+          {taggedPets.map((pet) => (
+            <TouchableOpacity
+              key={pet.id}
+              style={[
+                styles.petCard,
+                { borderColor: Colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => togglePetTag(pet.id)}
+            >
+              <Image source={{ uri: pet.img_path }} style={styles.petImage} />
+              <Text style={styles.petName}>{pet.name}</Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
         {/* 🗞️ Original Post Preview */}
@@ -199,7 +196,7 @@ const SharePost = () => {
             </View>
           </View>
           <Text style={styles.content}>{parsedPost.body}</Text>
-          { parsedPost.img_paths && parsedPost.img_paths?.length > 0 && (
+          {parsedPost.img_paths && parsedPost.img_paths?.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {parsedPost.img_paths.map((img: string, idx: number) => (
                 <Image key={idx} source={{ uri: img }} style={styles.image} />
@@ -212,7 +209,7 @@ const SharePost = () => {
         {renderLoadingButton({
           style: styles.shareBtn,
           children: <Text style={styles.shareText}>Share Now</Text>,
-          onPress: handleShare
+          onPress: handleShare,
         })}
         {/* <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Text style={styles.shareText}>Share Now</Text>

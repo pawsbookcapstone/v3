@@ -150,10 +150,10 @@ const Chat = () => {
     // },
   ]);
 
-  const hasNotif = useNotificationHook()
+  const hasNotif = useNotificationHook();
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId) return;
 
     const messageQuery = query(
       collection(db, "chats"),
@@ -164,16 +164,16 @@ const Chat = () => {
       setMessages(
         snapshot.docs.map((d) => {
           const t = d.data();
-          if (t.group){
+          if (t.group) {
             return {
               id: d.id,
               name: t.group_name,
               users: t.users,
               group: true,
-              img_path: '',
-              last_message: t.last_message ?? 'No message yet.',
-              time: computeTimePassed(t.last_sent_at?.toDate())
-            }
+              img_path: "",
+              last_message: t.last_message ?? "No message yet.",
+              time: computeTimePassed(t.last_sent_at?.toDate()),
+            };
           }
           const otherUserId = t.users[0] === userId ? t.users[1] : t.users[0];
           return {
@@ -188,25 +188,25 @@ const Chat = () => {
 
     const onlineQuery = query(
       collection(db, "users"),
-        where("online_status", "==", true), 
-        where('active_status', '!=', 'inactive'),
+      where("online_status", "==", true),
+      where("active_status", "!=", "inactive"),
     );
-    const unsubscribeOnline = onSnapshot(onlineQuery, ({docs}) => {
-        setOnlineUsers(
-          docs
-            .map((res) => {
-              const d = res.data();
-              return {
-                id: res.id,
-                name: `${d.firstname} ${d.lastname}`,
-                avatar: d.img_path,
-                active_status: d.active_status,
-                last_online_at: d.last_online_at
-              };
-            })
-            .filter((v) => v.id !== userId),
-        )
-    })
+    const unsubscribeOnline = onSnapshot(onlineQuery, ({ docs }) => {
+      setOnlineUsers(
+        docs
+          .map((res) => {
+            const d = res.data();
+            return {
+              id: res.id,
+              name: `${d.firstname} ${d.lastname}`,
+              avatar: d.img_path,
+              active_status: d.active_status,
+              last_online_at: d.last_online_at,
+            };
+          })
+          .filter((v) => v.id !== userId),
+      );
+    });
 
     return () => {
       unsubscribeOnline();
@@ -218,7 +218,7 @@ const Chat = () => {
     if (chat.group) {
       router.push({
         pathname: "/pet-owner/(chat)/group-chat",
-        params: { chatDetailsStr:JSON.stringify(chat) },
+        params: { chatDetailsStr: JSON.stringify(chat), group_name: chat.name },
       });
     } else {
       router.navigate({
@@ -250,14 +250,13 @@ const Chat = () => {
         <View style={styles.headerRow}>
           <Text style={styles.title}>Inbox</Text>
           <View style={styles.headerActions}>
-            {
-              !isPage &&  
+            {!isPage && (
               <Pressable
                 onPress={() => router.push("/pet-owner/(chat)/create-gc")}
               >
                 <Feather name="users" size={24} color="black" />
               </Pressable>
-            }
+            )}
             <Pressable
               onPress={() => router.push("/pet-owner/(chat)/search-users")}
             >
@@ -265,19 +264,19 @@ const Chat = () => {
             </Pressable>
             <Pressable onPress={() => router.push("/pet-owner/notifications")}>
               <Feather name="bell" size={24} color="black" />
-                          {
-                            hasNotif && 
-                                  <View
-                                    style={{
-                                      position: "absolute",
-                                      top: -1,
-                                      right: 1,
-                                      width: 8,
-                                      height: 8,
-                                      borderRadius: 5,
-                                      backgroundColor: "red",
-                                    }}
-                                  />}
+              {hasNotif && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -1,
+                    right: 1,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 5,
+                    backgroundColor: "red",
+                  }}
+                />
+              )}
             </Pressable>
           </View>
         </View>
