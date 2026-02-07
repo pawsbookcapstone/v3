@@ -426,10 +426,10 @@ const Home = () => {
   //   setSelectedPostId(postId);
   //   setReportModalVisible(true);
   // };
-  const deletePost = async (postId: string) => {
+  const deletePost = (postId: string) => {
     try {
       // Delete from Firestore
-      await remove("posts", postId); // or deleteDoc(doc(db, "posts", postId));
+      remove("posts", postId); // or deleteDoc(doc(db, "posts", postId));
 
       // Update local state
       setPosts((prev: any) => prev.filter((p: any) => p.id !== postId));

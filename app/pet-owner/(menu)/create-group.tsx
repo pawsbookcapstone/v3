@@ -38,7 +38,7 @@ const CreateGroup = () => {
     setQuestions(updated);
   };
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!groupName.trim()) return;
 
     try {
@@ -55,7 +55,7 @@ const CreateGroup = () => {
         createdAt: serverTimestamp(),
       };
 
-      await add("groups").value(newGroup);
+      add("groups").value(newGroup);
 
       alert("Group published!");
 

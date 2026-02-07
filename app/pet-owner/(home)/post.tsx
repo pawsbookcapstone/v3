@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add, set } from "@/helpers/db";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -11,7 +12,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Image,
   Modal,
   ScrollView,
@@ -20,7 +20,7 @@ import {
   TextInput,
   ToastAndroid,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const PostScreen = () => {
@@ -29,6 +29,8 @@ const PostScreen = () => {
   const { userId, userName, userImagePath, setFunc, isPage } = useAppContext();
 
   const router = useRouter();
+
+  const renderLoadingButton = useLoadingHook(true)
   // const { taggedPets: taggedPetsParam } = useLocalSearchParams();
 
   const [content, setContent] = useState("");
@@ -79,12 +81,9 @@ const PostScreen = () => {
   };
 
   const handlePost = async () => {
-    if (!content.trim() && images.length === 0) {
-      Alert.alert("Empty Post", "Please add some text or an image.");
-      return;
-    }
+    if (!content.trim() && images.length === 0)
+      throw "Please add some text or an image."
 
-    try {
       let data: any = {
         creator_id: userId,
         creator_name: userName,
@@ -123,9 +122,6 @@ const PostScreen = () => {
       }
 
       router.back();
-    } catch (e) {
-      Alert.alert("Error", e + "");
-    }
   };
 
   const handleBack = () => {
@@ -240,11 +236,18 @@ const PostScreen = () => {
         </View>
 
         {/* Post Button */}
-        <TouchableOpacity style={styles.postButton} onPress={handlePost}>
+        {renderLoadingButton({
+          style: styles.postButton,
+          children: <Text style={styles.postText}>
+            {editPost ? "Update Post" : "Post"}
+          </Text>,
+          onPress: handlePost
+        })}
+        {/* <TouchableOpacity style={styles.postButton} onPress={handlePost}>
           <Text style={styles.postText}>
             {editPost ? "Update Post" : "Post"}
           </Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Exit Modal */}

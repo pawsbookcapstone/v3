@@ -2,6 +2,7 @@ import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add } from "@/helpers/db";
 import { storage } from "@/helpers/firebase";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -13,6 +14,7 @@ import { serverTimestamp } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   Modal,
@@ -47,6 +49,8 @@ const Sell = () => {
   const [modalType, setModalType] = useState<"category" | "condition">(
     "category",
   );
+
+  const renderLoadingButton = useLoadingHook(true)
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -155,12 +159,8 @@ const Sell = () => {
       !description.trim() ||
       !category ||
       !condition
-    ) {
-      alert("Please fill all required fields.");
-      return;
-    }
+    ) throw "Please fill all required fields.";
 
-    try {
       // 2️⃣ Upload all selected images
       const uploadedImages: string[] = await Promise.all(
         images.map(async (uri) => {
@@ -192,14 +192,10 @@ const Sell = () => {
       // 4️⃣ Save to Firestore
       await add("marketPlace").value(newItem);
 
-      alert("Item published!");
+      Alert.alert("Success", "Item published!");
 
       // 5️⃣ Navigate back to marketplace
       router.push("/pet-owner/(tabs)/market-place");
-    } catch (error) {
-      console.error("Error publishing item:", error);
-      alert("Failed to publish item. Try again.");
-    }
   };
 
   const removeImage = (uri: string) => {
@@ -217,9 +213,15 @@ const Sell = () => {
           onBack={() => router.back()}
           centerTitle={false}
         />
-        <TouchableOpacity style={styles.publishBtn} onPress={handlePublish}>
+        {renderLoadingButton({
+          style: styles.publishBtn,
+          children: <Text style={styles.publishText}>Publish</Text>,
+          loadingText: "Saving",
+          onPress: handlePublish
+        })}
+        {/* <TouchableOpacity style={styles.publishBtn} onPress={handlePublish}>
           <Text style={styles.publishText}>Publish</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </HeaderLayout>
 
       <View style={styles.formContainer}>

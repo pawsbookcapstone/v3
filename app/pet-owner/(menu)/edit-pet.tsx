@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { setUnMerged } from "@/helpers/db";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -11,7 +12,6 @@ import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   Image,
@@ -21,7 +21,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const speciesOptions = ["Dog", "Cat", "Bird", "Rabbit"];
@@ -71,6 +71,8 @@ const EditPet = () => {
   // Animations
   const speciesAnim = useRef(new Animated.Value(400)).current;
   const breedAnim = useRef(new Animated.Value(400)).current;
+
+  const renderLoadingButton = useLoadingHook(true)
 
   useEffect(() => {
     if (!_vaccines) {
@@ -153,16 +155,15 @@ const EditPet = () => {
   };
 
   const handleSave = async () => {
-    try {
+    if (!name || !species || !breed || !gender || !profileImage) throw "Please fill all fields!!!"
+
       let data: any = {};
       if (hasVaccine) {
         const _vaccines = vaccines.filter(
           (vaccine) => vaccine.name && vaccine.date
         );
-        if (_vaccines.length == 0) {
-          Alert.alert("Error", "Please provide vaccine name and date!!!");
-          return;
-        }
+        if (_vaccines.length == 0)  throw "Please provide vaccine name and date!!!";
+
         data.vaccines = _vaccines;
       }
 
@@ -183,9 +184,6 @@ const EditPet = () => {
         gender: gender,
         ...data,
       });
-    } catch (e) {
-      Alert.alert("Error", e + "");
-    }
   };
 
   return (
@@ -445,9 +443,14 @@ const EditPet = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn} onPressIn={handleSave}>
+        {renderLoadingButton({
+          style: styles.saveBtn,
+          children: <Text style={styles.saveBtnText}>Save</Text>,
+          onPress: handleSave
+        })}
+        {/* <TouchableOpacity style={styles.saveBtn} onPressIn={handleSave}>
           <Text style={styles.saveBtnText}>Save</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   );

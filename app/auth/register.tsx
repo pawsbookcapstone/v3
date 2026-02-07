@@ -1,5 +1,6 @@
 import { serverTimestamp, set } from "@/helpers/db";
 import { auth } from "@/helpers/firebase";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
@@ -23,6 +24,8 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const renderLoadingButton = useLoadingHook(true)
 
   const handleBack = () => {
     router.replace("/StartScreen");
@@ -191,9 +194,14 @@ const Register = () => {
 
       {/* Sign Up Button */}
       {/* <Link href="/pet-owner/(tabs)/home" asChild> */}
-      <Pressable onPress={onSignUp} style={styles.buttonContainer}>
+      {renderLoadingButton({
+        style: styles.buttonContainer,
+        children: <Text style={styles.buttonText}>Sign Up</Text>,
+        onPress: onSignUp
+      })}
+      {/* <Pressable onPress={onSignUp} style={styles.buttonContainer}>
         <Text style={styles.buttonText}>Sign Up</Text>
-      </Pressable>
+      </Pressable> */}
       {/* </Link> */}
 
       {/* Already have an account */}

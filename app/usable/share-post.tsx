@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { add, find, set } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -10,7 +11,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Image,
   Modal,
   ScrollView,
@@ -19,7 +19,7 @@ import {
   TextInput,
   ToastAndroid,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const myProfileImage = "https://randomuser.me/api/portraits/men/32.jpg";
@@ -45,6 +45,7 @@ const SharePost = () => {
   const [showExitModal, setShowExitModal] = useState(false);
 
   const addNotif = useNotifHook()
+  const renderLoadingButton = useLoadingHook(true)
 
   useEffect(() => {
     if (taggedPetsParam) {
@@ -83,12 +84,8 @@ const SharePost = () => {
   };
 
   const handleShare = async () => {
-    if (!caption.trim()) {
-      Alert.alert("Empty Post", "Please add some text.");
-      return;
-    }
+    if (!caption.trim()) throw "Please add some text."
 
-    try {
       const sharedPostSnap = await find('posts', parsedPost.id)
       const sharesCount = parseInt(sharedPostSnap.data()?.shares ?? 0) + 1
       set('posts', parsedPost.id).value({
@@ -122,11 +119,6 @@ const SharePost = () => {
         ToastAndroid.show("Post shared", ToastAndroid.SHORT);
 
       router.back();
-    } catch (e) {
-      Alert.alert("Error", e + "");
-    }
-return
-
   };
 
   const handleBack = () => {
@@ -217,9 +209,14 @@ return
         </View>
 
         {/* 🚀 Share Button */}
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+        {renderLoadingButton({
+          style: styles.shareBtn,
+          children: <Text style={styles.shareText}>Share Now</Text>,
+          onPress: handleShare
+        })}
+        {/* <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Text style={styles.shareText}>Share Now</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
 
       {/* ⚠️ Exit Modal */}

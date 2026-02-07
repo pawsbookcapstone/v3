@@ -2,6 +2,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { db } from "@/helpers/firebase";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -12,7 +13,6 @@ import { router } from "expo-router";
 import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -21,7 +21,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 
 const CATEGORIES = [
@@ -43,9 +43,10 @@ const CreateProfile: React.FC = () => {
   const [pageName, setPageName] = useState<string>("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-const [allowAppointments, setAllowAppointments] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [allowAppointments, setAllowAppointments] = useState(false);
   const [imageUri, setImageUri] = useState("");
+
+  const renderLoadingButton = useLoadingHook(true)
 
 
   const toggleCategory = (label: string) => {
@@ -113,23 +114,24 @@ const [allowAppointments, setAllowAppointments] = useState(false);
     };
 
     setDoc(ref, payload);
+    router.back();
 
     // TODO: replace this with your API / store logic
-    console.log("Created profile:", payload);
+    // console.log("Created profile:", payload);
 
-    Alert.alert(
-      "Profile created",
-      `"${payload.firstname}" has been created with ${payload.categories.length} category(ies).`,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            // return to previous screen (or change to your desired route)
-            router.back();
-          },
-        },
-      ]
-    );
+    // Alert.alert(
+    //   "Profile created",
+    //   `"${payload.firstname}" has been created with ${payload.categories.length} category(ies).`,
+    //   [
+    //     {
+    //       text: "OK",
+    //       onPress: () => {
+    //         // return to previous screen (or change to your desired route)
+    //         router.back();
+    //       },
+    //     },
+    //   ]
+    // );
   };
 
   const handleImagePick = async () => {
@@ -148,7 +150,6 @@ const [allowAppointments, setAllowAppointments] = useState(false);
         if (!result.canceled && result.assets.length > 0) {
           setImageUri(result.assets[0].uri);
         }
-      setModalVisible(false);
       // } catch (error) {
       //   console.log("Image selection failed:", error);
       // }
@@ -222,17 +223,17 @@ const [allowAppointments, setAllowAppointments] = useState(false);
                 accessibilityLabel="Page name input"
               />
 
-<Pressable
-  style={styles.toggleRow}
-  onPress={() => setAllowAppointments((prev) => !prev)}
->
-  <FontAwesome
-    name={allowAppointments ? "check-square" : "square-o"}
-    size={20}
-    color={allowAppointments ? Colors.primary : "#888"}
-  />
-  <Text style={styles.toggleText}>Allow Appointments</Text>
-</Pressable>
+            <Pressable
+              style={styles.toggleRow}
+              onPress={() => setAllowAppointments((prev) => !prev)}
+            >
+              <FontAwesome
+                name={allowAppointments ? "check-square" : "square-o"}
+                size={20}
+                color={allowAppointments ? Colors.primary : "#888"}
+              />
+              <Text style={styles.toggleText}>Allow Appointments</Text>
+            </Pressable>
 
 
             <Pressable
@@ -363,9 +364,14 @@ const [allowAppointments, setAllowAppointments] = useState(false);
                 <Text style={styles.primaryBtnText}>Next</Text>
               </Pressable>
             ) : (
-              <Pressable onPress={handleCreate} style={styles.primaryBtn}>
-                <Text style={styles.primaryBtnText}>Create</Text>
-              </Pressable>
+              renderLoadingButton({
+                style: styles.primaryBtn,
+                children: <Text style={styles.primaryBtnText}>Create</Text>,
+                onPress: handleCreate
+              })
+              // <Pressable onPress={handleCreate} style={styles.primaryBtn}>
+              //   <Text style={styles.primaryBtnText}>Create</Text>
+              // </Pressable>
             )}
           </View>
         </ScrollView>

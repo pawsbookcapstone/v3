@@ -249,7 +249,7 @@ export default function GroupProfile() {
         joinedAt: serverTimestamp(),
       };
 
-      await set("groups", groupId, "join-request", userId).value({
+      set("groups", groupId, "join-request", userId).value({
         userId,
         answers: cleanAnswers,
         joinedAt: serverTimestamp(),

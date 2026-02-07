@@ -107,7 +107,6 @@ const LostFound = () => {
           };
         });
         setLostAndFoundItems(data);
-        console.log(data);
       } catch (error) {
         console.error("Failed to fetch appointments:", error);
       } finally {
@@ -135,7 +134,8 @@ const LostFound = () => {
   });
 
   const renderPost = ({ item }: { item: (typeof lostAndFoundItems)[0] }) => {
-    const postImages = item.petImages;
+    const postImages = (item.petImages ?? []).filter((d:any) => d);
+    
     const maxImagesToShow = 3;
     const extraImages = postImages.length - maxImagesToShow;
 
@@ -154,7 +154,7 @@ const LostFound = () => {
         <Text style={styles.caption}>{item.caption}</Text>
 
         {/* 🧩 Image Grid */}
-        {postImages?.length > 0 && (
+        {postImages && postImages.length > 0 && (
           <View style={styles.imageGrid}>
             {postImages
               .slice(0, maxImagesToShow)
@@ -184,19 +184,22 @@ const LostFound = () => {
           </View>
         )}
 
-        <View style={styles.actionBar}>
-          <Pressable
-            style={styles.actionButton}
-            onPress={() =>
-              handleChat(item.ownerName, item.userId, item.ownerAvatar)
-            }
-          >
-            <Feather name="message-circle" size={20} color={Colors.primary} />
-            <Text style={[styles.actionLabel, { color: Colors.primary }]}>
-              Chat
-            </Text>
-          </Pressable>
-        </View>
+        {
+          item.userId !== userId && 
+            <View style={styles.actionBar}>
+              <Pressable
+                style={styles.actionButton}
+                onPress={() =>
+                  handleChat(item.ownerName, item.userId, item.ownerAvatar)
+                }
+              >
+                <Feather name="message-circle" size={20} color={Colors.primary} />
+                <Text style={[styles.actionLabel, { color: Colors.primary }]}>
+                  Chat
+                </Text>
+              </Pressable>
+            </View>
+        }
       </View>
     );
   };

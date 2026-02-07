@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add } from "@/helpers/db";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -11,7 +12,6 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Easing,
   Image,
@@ -21,7 +21,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const AddPet = () => {
@@ -59,6 +59,8 @@ const AddPet = () => {
     Bird: ["Parrot", "Canary", "Finch"],
     Rabbit: ["Holland Lop", "Lionhead", "Mini Rex"],
   };
+
+  const renderLoadingButton = useLoadingHook(true)
 
   // Animations for modals
   const openModal = (
@@ -128,35 +130,32 @@ const AddPet = () => {
   };
 
   const handleSave = async () => {
-    try {
-      let data: any = {};
-      if (hasVaccine) {
-        const _vaccines = vaccines.filter(
-          (vaccine) => vaccine.name && vaccine.date
-        );
-        if (_vaccines.length == 0) {
-          Alert.alert("Error", "Please provide vaccine name and date!!!");
-          return;
-        }
-        data.vaccines = _vaccines;
-      }
+    if (!name || !species || !breed || !gender || !profileImage) throw "Please fill all fields!!!"
 
-      if (profileImage) {
-        const imgUrl = await uploadImageUri(profileImage);
-        data.img_path = imgUrl;
-      }
-
-      await add("users", userId, "pets").value({
-        name: name,
-        species: species,
-        breed: breed,
-        age: age,
-        gender: gender,
-        ...data,
-      });
-    } catch (e) {
-      Alert.alert("Error", e + "");
+    let data: any = {};
+    if (hasVaccine) {
+      const _vaccines = vaccines.filter(
+        (vaccine) => vaccine.name && vaccine.date
+      );
+      if (_vaccines.length == 0)
+        throw "Please provide vaccine name and date!!!";
+        
+      data.vaccines = _vaccines;
     }
+
+    if (profileImage) {
+      const imgUrl = await uploadImageUri(profileImage);
+      data.img_path = imgUrl;
+    }
+
+    await add("users", userId, "pets").value({
+      name: name,
+      species: species,
+      breed: breed,
+      age: age,
+      gender: gender,
+      ...data,
+    });
   };
 
   return (
@@ -416,9 +415,16 @@ const AddPet = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn} onPressIn={handleSave}>
+        {
+          renderLoadingButton({
+            style: styles.saveBtn,
+            children: <Text style={styles.saveBtnText}>Save</Text>,
+            onPress: handleSave
+          })
+        }
+        {/* <TouchableOpacity style={styles.saveBtn} onPressIn={handleSave}>
           <Text style={styles.saveBtnText}>Save</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   );

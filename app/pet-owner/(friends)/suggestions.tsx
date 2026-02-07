@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { add, get, serverTimestamp, where } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -24,6 +25,7 @@ const Suggestions = () => {
 
   // const [sentRequests, setSentRequests] = useState<string[]>([]);
   const addNotif = useNotifHook()
+  const renderLoadingButton = useLoadingHook(true)
 
   useEffect(() => {
     const chunk = (arr: string[], size = 10) =>
@@ -192,14 +194,22 @@ const Suggestions = () => {
                 </Text>
               </View>
             ) : ( */}
-              <Pressable
+            {renderLoadingButton({
+              style: [styles.button, { backgroundColor: Colors.primary }],
+              children: <Text style={[styles.btnText, { color: "#fff" }]}>
+                  Add Friend
+                </Text>,
+              loadingText: 'Loading',
+              onPress: () => handleAddFriend(item)
+            })}
+              {/* <Pressable
                 style={[styles.button, { backgroundColor: Colors.primary }]}
                 onPress={() => handleAddFriend(item)}
               >
                 <Text style={[styles.btnText, { color: "#fff" }]}>
                   Add Friend
                 </Text>
-              </Pressable>
+              </Pressable> */}
             {/* )} */}
 
             <Pressable

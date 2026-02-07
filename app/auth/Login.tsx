@@ -1,8 +1,8 @@
 import { useAppContext } from "@/AppsProvider";
-import { LoadingButton } from "@/components/LoadingButton";
 
 import { find, serverTimestamp, set } from "@/helpers/db";
 import { auth } from "@/helpers/firebase";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
@@ -11,14 +11,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import {
-  Alert,
   Image,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const Login = () => {
@@ -29,8 +28,9 @@ const Login = () => {
   //ad's account
   // const [email, setemail] = useState("adrianfegalan@gmail.com");
   // const [password, setpassword] = useState("PASSWORD");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const renderLoadingButton = useLoadingHook(true)
 
   const {
     setUserId,
@@ -40,17 +40,11 @@ const Login = () => {
     setUserImagePath,
   } = useAppContext();
 
-  const handleBack = () => {
-    router.replace("/StartScreen");
-  };
-
   const onLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
+      throw "Please fill in all fields!!!"
     }
     
-    setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -64,8 +58,7 @@ const Login = () => {
 
       if (!userDoc.exists()) {
         await auth.signOut();
-        Alert.alert("Error", "Account not found!!!");
-        return;
+        throw "Account not found!!!";
       }
 
       let profiles = await AsyncStorage.getItem('profiles')
@@ -89,18 +82,17 @@ const Login = () => {
       setUserLastName(user.lastname);
       setUserEmail(user.email);
       setUserImagePath(user.img_path);
-      setLoading(false);
       router.replace({
-        // pathname: "/other-user/home",
         pathname: "/pet-owner/(tabs)/home",
         params: { imagepath: setUserImagePath },
       });
     } catch (e) {
-      Alert.alert("Error", e + "");
-      console.log(e);
-    }
-    finally{
-      setLoading(false);
+      // Alert.alert("Error", e + "");
+      const error = e+ ""
+      if (error.includes("(auth/network-request-failed)")) throw "No internet connection"
+      if (error.includes("(auth/invalid-credential)")) throw "Incorrect credentials"
+      
+      throw error
     }
   };
 
@@ -177,17 +169,13 @@ const Login = () => {
 
       <Text style={styles.forgotPassword}>Forgot password?</Text>
 
-      {/* <Link href="/pet-owner/(tabs)/home" asChild> */}
-      {/* <Pressable onPress={onLogin} style={styles.buttonContainer}>
-        <Text style={styles.buttonText}>Login</Text>
-      </Pressable> */}
-      <LoadingButton
-        title="Login"
-        loading={loading}
-        onPress={onLogin}
-        style={styles.buttonContainer}
-        textStyle={styles.buttonText}
-      />
+      {renderLoadingButton({
+        style:styles.buttonContainer,
+        children: <Text style={styles.buttonText}>
+            Login
+          </Text>,
+        onPress: onLogin
+      })}
 
       {/* </Link> */}
 

@@ -68,7 +68,6 @@ const myFriends = () => {
 
   useEffect(() => {
     const id = userToViewId ?? userId
-    console.log(id);
     
     collectionName("friends")
       .whereArrayContains("users", id)

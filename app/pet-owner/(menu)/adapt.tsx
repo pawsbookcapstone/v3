@@ -213,38 +213,41 @@ const Adapt = () => {
         )}
 
         {/* Actions */}
-        <View style={styles.actionBar}>
-          <Pressable
-            style={styles.actionButton}
-            onPress={() => handleSaveItem(item)}
-          >
-            <Feather
-              name="bookmark"
-              size={20}
-              color={item.saved ? Colors.primary : "#374151"}
-            />
-            <Text
-              style={[
-                styles.actionLabel,
-                { color: item.saved ? Colors.primary : "#374151" },
-              ]}
+
+        {item.ownerId !== userId && 
+          <View style={styles.actionBar}>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => handleSaveItem(item)}
             >
-              {item.saved ? "Saved" : "Save"}
-            </Text>
-          </Pressable>
+              <Feather
+                name="bookmark"
+                size={20}
+                color={item.saved ? Colors.primary : "#374151"}
+              />
+              <Text
+                style={[
+                  styles.actionLabel,
+                  { color: item.saved ? Colors.primary : "#374151" },
+                ]}
+              >
+                {item.saved ? "Saved" : "Save"}
+              </Text>
+            </Pressable>
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <Pressable
-            style={styles.actionButton}
-            onPress={() =>
-              handleChat(item.ownerName, item.ownerId, item.ownerImage)
-            }
-          >
-            <Ionicons name="chatbubble-outline" size={20} color="#374151" />
-            <Text style={styles.actionLabel}>Chat</Text>
-          </Pressable>
-        </View>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() =>
+                handleChat(item.ownerName, item.ownerId, item.ownerImage)
+              }
+            >
+              <Ionicons name="chatbubble-outline" size={20} color="#374151" />
+              <Text style={styles.actionLabel}>Chat</Text>
+            </Pressable>
+          </View>
+        }
       </View>
     );
   };
@@ -452,6 +455,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    paddingBottom: 10
   },
   postHeader: {
     flexDirection: "row",
@@ -544,7 +548,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginLeft: 10,
     alignItems: "center",
-    marginTop: 10,
     paddingVertical: 8,
   },
   actionButton: {

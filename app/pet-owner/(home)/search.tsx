@@ -243,11 +243,11 @@ const Search = () => {
     })
   }
 
-  const saveRecentSearch = async (item: any) => {
+  const saveRecentSearch = (item: any) => {
     if (!userId) return;
 
     try {
-      await set("users", userId, "recent_searches", item.id).value({
+      set("users", userId, "recent_searches", item.id).value({
         name: item.name,
         is_page: item.is_page,
         img_path: item.img_path ?? null,

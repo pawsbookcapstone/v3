@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { all, remove } from "@/helpers/db";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -65,6 +66,8 @@ const ManagePet = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const { userId } = useAppContext();
+
+  const renderLoadingButton = useLoadingHook(true)
 
   useEffect(() => {
     onRefresh();
@@ -306,7 +309,16 @@ const ManagePet = () => {
               </Text>
 
               <View style={styles.confirmActions}>
-                <TouchableOpacity
+                {renderLoadingButton({
+                  style: [
+                    styles.confirmBtn,
+                    { backgroundColor: Colors.primary },
+                  ],
+                  children: <Text style={styles.confirmBtnText}>Yes, Delete</Text>,
+                  loadingText: "Deleting",
+                  onPress: handleDelete
+                })}
+                {/* <TouchableOpacity
                   style={[
                     styles.confirmBtn,
                     { backgroundColor: Colors.primary },
@@ -314,7 +326,7 @@ const ManagePet = () => {
                   onPress={handleDelete}
                 >
                   <Text style={styles.confirmBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity
                   style={[styles.confirmBtn, { backgroundColor: "#ccc" }]}

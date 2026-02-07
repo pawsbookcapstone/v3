@@ -58,14 +58,14 @@ const AnonymousPosting = () => {
     }
   };
 
-  const handlePost = async () => {
+  const handlePost = () => {
     if (!content.trim() && images.length === 0) {
       Alert.alert("Empty Post", "Please add some text or an image.");
       return;
     }
 
     try {
-      await add("groups", groupId, "posts").value({
+      add("groups", groupId, "posts").value({
         // id: Date.now().toString(),
         user: userName,
         profileImage: userImagePath,

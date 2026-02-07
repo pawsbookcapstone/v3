@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add, serverTimestamp } from "@/helpers/db";
+import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -35,6 +36,8 @@ const CreateAdoptionPost = () => {
     "Please select your pet category",
   );
 
+  const renderLoadingButton = useLoadingHook(true)
+
   const openModal = (type: "category") => {
     setModalType(type);
     setModalOptions(categories);
@@ -50,8 +53,7 @@ const CreateAdoptionPost = () => {
   // const [images, setImages] = useState<string[]>([]);
 
   const createLostFound = async () => {
-    try {
-      const finalImage = await uploadImageUri(image);
+      const finalImage = image ? await uploadImageUri(image) : null;
 
       await add("post-adopt").value({
         petCategory: petCategory,
@@ -62,13 +64,8 @@ const CreateAdoptionPost = () => {
         createdAt: serverTimestamp(),
         petImage: finalImage,
       });
-      router.replace("/pet-owner/(menu)/adapt");
-    } catch (error) {
-      console.error("Failed to create appointment:", error);
-      alert("Something went wrong. Please try again.");
-    } finally {
-      // setLoading(false);
-    }
+
+      router.back();
   };
 
   const pickImage = async () => {
@@ -130,13 +127,19 @@ const CreateAdoptionPost = () => {
         </Pressable>
 
         {/* Post Button */}
-        <Pressable
+        {renderLoadingButton({
+          style: [styles.postBtn, { opacity: caption ? 1 : 0.7 }],
+          children: <Text style={styles.postBtnText}>Post</Text>,
+          disabled:!caption,
+          onPress: createLostFound
+        })}
+        {/* <Pressable
           style={[styles.postBtn, { opacity: caption ? 1 : 0.7 }]}
           onPress={createLostFound}
           disabled={!caption}
         >
           <Text style={styles.postBtnText}>Post</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
 
       {/* modal */}

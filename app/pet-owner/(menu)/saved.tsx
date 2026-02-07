@@ -192,10 +192,10 @@ const Saved = () => {
     setImageModalVisible(true);
   };
 
-  const removeItem = async (id: string) => {
+  const removeItem = (id: string) => {
     try {
       // Delete from Firestore
-      await remove("users", userId, "savedItems", id);
+      remove("users", userId, "savedItems", id);
 
       // Remove locally
       setSavedItems((prev) => prev.filter((item) => item.id !== id));
