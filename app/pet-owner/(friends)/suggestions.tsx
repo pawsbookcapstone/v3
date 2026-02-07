@@ -13,6 +13,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -123,7 +124,7 @@ const Suggestions = () => {
       
     addNotif({
       receiver_id: item.id,
-      href: "/pet-owner/my-friends",
+      href: "/pet-owner/add-friend",
       type: "Sent Friend Request",
       params: {
         id: res.id,
@@ -141,7 +142,14 @@ const Suggestions = () => {
 
     return (
       <View style={styles.card}>
-        <Image source={{ uri: item.img_path }} style={styles.profilePic} />
+        <TouchableOpacity onPress={() => {
+          router.push({
+            pathname: "/usable/user-profile",
+            params: { userToViewId: item.id },
+          });
+        }}>
+          <Image source={{ uri: item.img_path }} style={styles.profilePic} />
+        </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{item.name}</Text>

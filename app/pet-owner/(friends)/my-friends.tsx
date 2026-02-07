@@ -1,11 +1,11 @@
 import { useAppContext } from "@/AppsProvider";
-import { get, remove, where } from "@/helpers/db";
+import { collectionName, remove } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
-import { Entypo, Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   findNodeHandle,
@@ -23,6 +23,8 @@ import {
 
 const myFriends = () => {
   const { userId } = useAppContext();
+
+  const {userToViewId} = useLocalSearchParams()
 
   const [search, setSearch] = useState("");
   const [friends, setFriends] = useState<any>([
@@ -65,24 +67,27 @@ const myFriends = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
-      const snap = await get("friends").where(
-        where("users", "array-contains", userId),
-        where("confirmed", "==", true)
-      );
-      setFriends(
-        snap.docs.map((user: any) => {
-          const data = user.data();
-          const otherUserId =
-            data.users[0] === userId ? data.users[1] : data.users[0];
-          return {
-            ...data.details[otherUserId],
-            id: user.id,
-          };
-        })
-      );
-    };
-    fetch();
+    const id = userToViewId ?? userId
+    console.log(id);
+    
+    collectionName("friends")
+      .whereArrayContains("users", id)
+      .whereEquals("confirmed", true)
+      .get()
+      .then(({docs}) => {
+        setFriends(
+          docs.map((user: any) => {
+            const data = user.data();
+            const otherUserId =
+              data.users[0] === id ? data.users[1] : data.users[0];
+            return {
+              ...data.details[otherUserId],
+              id: user.id,
+              otherUserId
+            };
+          })
+        )
+      })
   }, []);
 
   // open dropdown under tapped dots
@@ -105,9 +110,20 @@ const myFriends = () => {
     setSelectedFriend(null);
     setModalVisible(false);
   };
+    
+  const handleSeeProfile = (id: string) => {
+    if (id == userId) {
+      router.push("/pet-owner/profile");
+      return
+    }
+    router.push({
+      pathname: "/usable/user-profile",
+      params: { userToViewId: id },
+    });
+  };
 
   const renderFriend = ({ item }: any) => (
-    <View style={styles.friendCard}>
+    <TouchableOpacity style={styles.friendCard} onPress={() => handleSeeProfile(item.otherUserId)} >
       <View>
         <Image source={{ uri: item.img_path }} style={styles.profilePic} />
         {/* {item.online && <View style={styles.onlineDot} />} */}
@@ -116,10 +132,10 @@ const myFriends = () => {
         <Text style={styles.name}>{item.name}</Text>
         {/* <Text style={styles.mutual}>{item.mutualFriends} mutual friends</Text> */}
       </View>
-      <TouchableOpacity onPress={(e) => openDropdown(e, item)}>
+      {/* <TouchableOpacity onPress={(e) => openDropdown(e, item)}>
         <Entypo name="dots-three-vertical" size={18} color="#555" />
-      </TouchableOpacity>
-    </View>
+      </TouchableOpacity> */}
+    </TouchableOpacity>
   );
 
   return (

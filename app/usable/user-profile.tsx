@@ -353,7 +353,7 @@ const Profile = () => {
     setFriendStatus("Your Request")
     addNotif({
       receiver_id: userToViewId,
-      href: "/pet-owner/my-friends",
+      href: "/pet-owner/add-friend",
       type: "Sent Friend Request",
       params: {
         id: generatedId,
@@ -725,7 +725,10 @@ const Profile = () => {
 
             <Pressable
               style={styles.viewall}
-              onPress={() => router.push("/pet-owner/(friends)/my-friends")}
+              onPress={() => router.push({
+                pathname: "/pet-owner/(friends)/my-friends",
+                params: {userToViewId}
+              })}
             >
               <Text
                 style={[

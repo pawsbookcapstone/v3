@@ -1,3 +1,4 @@
+import ProfileImage from "@/app/usable/profile-image";
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { find, set } from "@/helpers/db";
@@ -186,7 +187,8 @@ const EditProfile = () => {
             <View style={styles.profilePhotoContainer}>
               <Pressable onPress={() => openImagePicker("profile")}>
                 {profile.profile_photo || profile.img_path ? (
-                  <Image
+                  <ProfileImage
+                  // <Image
                     source={{ uri: profile.profile_photo ?? profile.img_path }}
                     style={styles.profileImage}
                   />

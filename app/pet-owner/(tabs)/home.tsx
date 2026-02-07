@@ -407,7 +407,6 @@ const Home = () => {
         })
       return;
     }
-    console.log(post);
     
     if (post.creator_is_page)
       router.push({

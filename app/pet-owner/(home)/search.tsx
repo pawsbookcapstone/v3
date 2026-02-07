@@ -291,7 +291,7 @@ const Search = () => {
       
       addNotif({
         receiver_id: item.id,
-        href: "/pet-owner/my-friends",
+        href: "/pet-owner/add-friend",
         type: "Sent Friend Request",
         params: {
           id: res.id,
