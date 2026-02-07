@@ -2,13 +2,14 @@ import { useAppContext } from "@/AppsProvider";
 import { all, remove, set } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
 import { computeTimePassed } from "@/helpers/timeConverter";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import { FriendRequestSkeleton } from "@/shared/components/FriendRequestSkeleton";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   FlatList,
@@ -30,9 +31,9 @@ const addFriend = () => {
 
   const addNotif = useNotifHook();
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     onRefresh();
-  }, []);
+  }, [userId]);
 
   // 🔄 Handle Pull-to-Refresh
   // const onRefresh = async () => {

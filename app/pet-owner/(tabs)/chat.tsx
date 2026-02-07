@@ -2,6 +2,7 @@ import { useAppContext } from "@/AppsProvider";
 import { db } from "@/helpers/firebase";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useNotificationHook } from "@/hooks/notificationHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import SkeletalLoader from "@/shared/components/ChatSkeletal";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -15,7 +16,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   FlatList,
   Image,
@@ -152,7 +153,7 @@ const Chat = () => {
 
   const hasNotif = useNotificationHook();
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     if (!userId) return;
 
     const messageQuery = query(
@@ -218,7 +219,7 @@ const Chat = () => {
     if (chat.group) {
       router.push({
         pathname: "/pet-owner/(chat)/group-chat",
-        params: { chatDetailsStr: JSON.stringify(chat), group_name: chat.name },
+        params: { chatDetailsStr: JSON.stringify(chat) },
       });
     } else {
       router.navigate({

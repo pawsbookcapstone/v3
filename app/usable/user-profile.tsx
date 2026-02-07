@@ -3,6 +3,7 @@ import { add, all, count, find, get, remove, set, where } from "@/helpers/db";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
 import { computeTimePassed } from "@/helpers/timeConverter";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -17,7 +18,7 @@ import {
 } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { limit, orderBy, serverTimestamp } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   Image,
@@ -32,7 +33,7 @@ import {
 } from "react-native";
 
 const Profile = () => {
-  const { userId, userName, userImagePath } = useAppContext();
+  const { userId, userName, userImagePath, isPage } = useAppContext();
   const { userToViewId } = useLocalSearchParams<{
     id: string;
     name: string;
@@ -154,127 +155,127 @@ const Profile = () => {
   //   fetch();
   // }, []);
 
-  useEffect(() => {
-  let mounted = true;
+  useOnFocusHook(() => {
+    let mounted = true;
 
-  const fetch = async () => {
-    setLoading(true);
+    const fetch = async () => {
+      setLoading(true);
 
-    try {
-      /** =========================
-       *  PARALLEL BASE QUERIES
-       ========================== */
-      const [
-        userSnap,
-        blockSnap,
-        postsSnap,
-      ] = await Promise.all([
-        find("users", userToViewId),
-        find("users", userId, "blocked_users", userToViewId),
-        get("posts").where(
-          where("creator_id", "==", userToViewId),
-          orderBy("date", "desc")
-        ),
-      ]);
+      try {
+        /** =========================
+         *  PARALLEL BASE QUERIES
+         ========================== */
+        const [
+          userSnap,
+          blockSnap,
+          postsSnap,
+        ] = await Promise.all([
+          find("users", userToViewId),
+          find("users", userId, "blocked_users", userToViewId),
+          get("posts").where(
+            where("creator_id", "==", userToViewId),
+            orderBy("date", "desc")
+          ),
+        ]);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      const profileData: any = userSnap.data();
-      setProfile(profileData);
-      setBlocked(blockSnap.exists());
+        const profileData: any = userSnap.data();
+        setProfile(profileData);
+        setBlocked(blockSnap.exists());
 
-      /** =========================
-       *  FRIEND / PAGE LOGIC
-       ========================== */
-      if (!profileData.is_page) {
-        const chatId = generateChatId(userId, userToViewId);
+        /** =========================
+         *  FRIEND / PAGE LOGIC
+         ========================== */
+        if (!profileData.is_page) {
+          const chatId = generateChatId(userId, userToViewId);
 
-        const friendSnap = await find("friends", chatId);
+          const friendSnap = await find("friends", chatId);
 
-        if (friendSnap.exists()) {
-          const d = friendSnap.data();
-          if (d.confirmed) setFriendStatus("Friend");
-          else if (d.users[0] === userId) setFriendStatus("Your Request");
-          else setFriendStatus("Other Request");
+          if (friendSnap.exists()) {
+            const d = friendSnap.data();
+            if (d.confirmed) setFriendStatus("Friend");
+            else if (d.users[0] === userId) setFriendStatus("Your Request");
+            else setFriendStatus("Other Request");
+          }
+
+          const friendsSnap = await get("friends").where(
+            where("users", "array-contains", userToViewId),
+            where("confirmed", "==", true),
+            limit(6)
+          );
+
+          const friends = friendsSnap.docs.map(f => {
+            const d = f.data();
+            const otherId =
+              d.users[0] === userToViewId ? d.users[1] : d.users[0];
+
+            return {
+              id: f.id,
+              user_id: otherId,
+              ...d.details?.[otherId],
+            };
+          });
+
+          setFriends(friends);
+
+          if (friends.length < 6) {
+            setFriendsCount(friends.length);
+          } else {
+            const countSnap = await count("friends").where(
+              where("users", "array-contains", userToViewId),
+              where("confirmed", "==", true)
+            );
+            setFriendsCount(countSnap);
+          }
         }
 
-        const friendsSnap = await get("friends").where(
-          where("users", "array-contains", userToViewId),
-          where("confirmed", "==", true),
-          limit(6)
+        /** =========================
+         *  POSTS OPTIMIZATION
+         ========================== */
+        const posts = await Promise.all(
+          postsSnap.docs.map(async dc => {
+            const d = dc.data();
+
+            const [sharedSnap, commentsSnap] = await Promise.all([
+              d.shared_post_id
+                ? find("posts", d.shared_post_id)
+                : Promise.resolve(null),
+              all("posts", dc.id, "comments"),
+            ]);
+
+            return {
+              id: dc.id,
+              ...d,
+              liked: Array.isArray(d.liked_by_ids)
+                ? d.liked_by_ids.includes(userId)
+                : false,
+              showComments: false,
+              shared: sharedSnap?.data() ?? null,
+              comments: commentsSnap.docs.map(c => ({
+                id: c.id,
+                ...c.data(),
+              })),
+              date_ago: computeTimePassed(d.date.toDate()),
+            };
+          })
         );
 
-        const friends = friendsSnap.docs.map(f => {
-          const d = f.data();
-          const otherId =
-            d.users[0] === userToViewId ? d.users[1] : d.users[0];
+        if (mounted) setPosts(posts);
 
-          return {
-            id: f.id,
-            user_id: otherId,
-            ...d.details?.[otherId],
-          };
-        });
-
-        setFriends(friends);
-
-        if (friends.length < 6) {
-          setFriendsCount(friends.length);
-        } else {
-          const countSnap = await count("friends").where(
-            where("users", "array-contains", userToViewId),
-            where("confirmed", "==", true)
-          );
-          setFriendsCount(countSnap);
-        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (mounted) setLoading(false);
       }
+    };
 
-      /** =========================
-       *  POSTS OPTIMIZATION
-       ========================== */
-      const posts = await Promise.all(
-        postsSnap.docs.map(async dc => {
-          const d = dc.data();
+    fetch();
 
-          const [sharedSnap, commentsSnap] = await Promise.all([
-            d.shared_post_id
-              ? find("posts", d.shared_post_id)
-              : Promise.resolve(null),
-            all("posts", dc.id, "comments"),
-          ]);
-
-          return {
-            id: dc.id,
-            ...d,
-            liked: Array.isArray(d.liked_by_ids)
-              ? d.liked_by_ids.includes(userId)
-              : false,
-            showComments: false,
-            shared: sharedSnap?.data() ?? null,
-            comments: commentsSnap.docs.map(c => ({
-              id: c.id,
-              ...c.data(),
-            })),
-            date_ago: computeTimePassed(d.date.toDate()),
-          };
-        })
-      );
-
-      if (mounted) setPosts(posts);
-
-    } catch (err) {
-      console.error(err);
-    } finally {
-      if (mounted) setLoading(false);
-    }
-  };
-
-  fetch();
-
-  return () => {
-    mounted = false;
-  };
-}, []);
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
 
   const openImageModal = (images: string[], index: number) => {
@@ -596,44 +597,46 @@ const Profile = () => {
 
             {/* Buttons */}
             <View style={styles.actionWrapper}>
-              <Pressable
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: friendStatus === "Your Request" ? Colors.red : (friendStatus == 'Friend' ? "#ccc" : Colors.primary) },
-                ]}
-                onPress={() => {
-                  if (friendStatus === "Friend" || friendStatus === "Your Request") {
-                    unfriendOrCancelRequest()
-                  } else {
-                    addFriend()
-                  }
-                }}
-              >
-                {(friendStatus === "Friend") && (
-                  <>
-                    <FontAwesome5 name="user-times" size={17} color="black" />
-                    <Text style={[styles.actionButtonText, { color: "black" }]}>
-                      Unfriend
-                    </Text>
-                  </>
-                )}
-                {friendStatus === "Unfriend" && (
-                  <>
-                    <FontAwesome5 name="user-plus" size={17} color="black" />
-                    <Text style={[styles.actionButtonText, { color: "black" }]}>
-                      Add Friend
-                    </Text>
-                  </>
-                )}
-                {friendStatus === "Your Request" && (
-                  <>
-                    <FontAwesome5 name="user-plus" size={17} color="black" />
-                    <Text style={[styles.actionButtonText, { color: "black" }]}>
-                      Cancel Request
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+              {!isPage &&
+                <Pressable
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: friendStatus === "Your Request" ? Colors.red : (friendStatus == 'Friend' ? "#ccc" : Colors.primary) },
+                  ]}
+                  onPress={() => {
+                    if (friendStatus === "Friend" || friendStatus === "Your Request") {
+                      unfriendOrCancelRequest()
+                    } else {
+                      addFriend()
+                    }
+                  }}
+                >
+                  {(friendStatus === "Friend") && (
+                    <>
+                      <FontAwesome5 name="user-times" size={17} color="black" />
+                      <Text style={[styles.actionButtonText, { color: "black" }]}>
+                        Unfriend
+                      </Text>
+                    </>
+                  )}
+                  {friendStatus === "Unfriend" && (
+                    <>
+                      <FontAwesome5 name="user-plus" size={17} color="black" />
+                      <Text style={[styles.actionButtonText, { color: "black" }]}>
+                        Add Friend
+                      </Text>
+                    </>
+                  )}
+                  {friendStatus === "Your Request" && (
+                    <>
+                      <FontAwesome5 name="user-plus" size={17} color="black" />
+                      <Text style={[styles.actionButtonText, { color: "black" }]}>
+                        Cancel Request
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              }
 
               <Pressable
                 style={[

@@ -5,7 +5,7 @@ import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -18,6 +18,7 @@ import {
 } from "react-native";
 
 import { useAppContext } from "@/AppsProvider";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 
 type BaseSavedItem = {
   id: string;
@@ -77,7 +78,7 @@ const Saved = () => {
   const screenWidth = Dimensions.get("window").width;
 
   // Fetch saved marketplace items
-  useEffect(() => {
+  useOnFocusHook(() => {
     const fetchSavedItems = async () => {
       if (!userId) return;
 
@@ -162,29 +163,7 @@ const Saved = () => {
     };
 
     fetchSavedItems();
-  }, [userId]);
-
-  // Placeholder posts fetch - replace with your own logic if you have saved posts
-  useEffect(() => {
-    const fetchSavedPosts = async () => {
-      setLoadingPosts(true);
-      try {
-        // Example: fetch from "users/{userId}/savedPosts"
-        // const postsRef = collection(db, "users", userId, "savedPosts");
-        // const snapshot = await getDocs(postsRef);
-        // const data: PostItem[] = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
-        // setPosts(data);
-
-        setPosts([]); // empty for now
-      } catch (error) {
-        console.error("Error fetching saved posts:", error);
-      } finally {
-        setLoadingPosts(false);
-      }
-    };
-
-    fetchSavedPosts();
-  }, [userId]);
+  }, []);
 
   const openImageModal = (images: string[], index: number) => {
     setSelectedPostImages(images);

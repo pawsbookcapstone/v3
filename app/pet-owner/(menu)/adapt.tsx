@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { all } from "@/helpers/db";
 import { saveAdoptPet } from "@/helpers/savedItems";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -70,7 +71,7 @@ const Adapt = () => {
   const { userId, userName, userImagePath } = useAppContext();
 
   //bagong code
-  React.useEffect(() => {
+  useOnFocusHook(() => {
     const fetchAdoptionPosts = async () => {
       try {
         // setIsLoading(true);

@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { all, remove } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -8,7 +9,7 @@ import SkeletonPetCard from "@/shared/components/PetSkeleton";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Entypo, Feather, FontAwesome, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Image,
   Modal,
@@ -69,7 +70,7 @@ const ManagePet = () => {
 
   const renderLoadingButton = useLoadingHook(true)
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     onRefresh();
   }, []);
 

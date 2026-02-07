@@ -1,12 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
 import { add, get, serverTimestamp, where } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   FlatList,
@@ -27,7 +28,7 @@ const CreateGc = () => {
 
   const [users, setUsers] = useState<any>([]);
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     get('users').where(where('id', '!=', userId))
     .then(({docs}) => {
       setUsers(docs.map(user => {

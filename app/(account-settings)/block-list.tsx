@@ -1,12 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
 import { all, get, remove, where } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -42,7 +43,7 @@ const BlockList = () => {
   const slideAnim = useRef(new Animated.Value(-60)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     const fetch = async () => {
       const snap = await all("users", userId, "blocked_users")
       if (snap.empty) return

@@ -10,13 +10,14 @@ import {
   where
 } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Entypo } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { limit } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   findNodeHandle,
@@ -48,7 +49,7 @@ type RecentSearch = {
 const initialSearches: RecentSearch[] = [];
 
 const Search = () => {
-  const { userId, userName, userImagePath } = useAppContext();
+  const { userId, userName, userImagePath, isPage } = useAppContext();
   const [resultText, setResultText] = useState("");
   const [search, setSearch] = useState("");
   const [searched, setSearched] = useState<any>([]);
@@ -63,7 +64,7 @@ const Search = () => {
 
   const addNotif = useNotifHook();
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     const fetchUsers = async () => {
       try {
         const snap = await get("users", userId, "recent_searches").where(
@@ -76,7 +77,7 @@ const Search = () => {
             const d = doc.data();
             return {
               id: doc.id,
-              is_page: d.is_page,
+              is_page: d.is_page ?? false,
               name: d.name,
               img_path: d.img_path ?? "",
             };
@@ -87,7 +88,11 @@ const Search = () => {
       }
 
 
-      const snap = await collectionName("users").get();
+      const snap = isPage 
+        ? await collectionName("users") 
+          .whereEquals("is_page", true)
+          .get()
+        : await collectionName("users").get();
       const friendsSnap = await get("friends").where(
         where("users", "array-contains", userId),
       );
@@ -109,7 +114,7 @@ const Search = () => {
           const _friend = friendsData[user.id];
           return {
             id: user.id,
-            is_page: d.is_page,
+            is_page: d.is_page ?? false,
             name: `${d.firstname} ${d.lastname}`,
             img_path: d.img_path,
             status: _friend?.status ?? "Not Friend",
@@ -249,7 +254,7 @@ const Search = () => {
     try {
       set("users", userId, "recent_searches", item.id).value({
         name: item.name,
-        is_page: item.is_page,
+        is_page: item.is_page ?? false,
         img_path: item.img_path ?? null,
         date: serverTimestamp(),
       });

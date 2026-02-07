@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { collectionName, update } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import { AppointmentSkeleton } from "@/shared/components/AppointmentSkeletal";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -106,7 +107,7 @@ const Appointment = () => {
     }
   };
 
-  React.useEffect(() => {
+  useOnFocusHook(() => {
     onRefresh()
   }, []);
 

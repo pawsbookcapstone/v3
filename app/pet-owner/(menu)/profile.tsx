@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { add, all, count, find, get, set, where } from "@/helpers/db";
 import { computeTimePassed } from "@/helpers/timeConverter";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -14,7 +15,7 @@ import {
 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { limit, orderBy, serverTimestamp } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   Pressable,
@@ -111,103 +112,103 @@ const Profile = () => {
   //   fetchProfile();
   // }, []);
 
-  useEffect(() => {
-  let mounted = true;
+  useOnFocusHook(() => {
+    let mounted = true;
 
-  const fetchProfile = async () => {
-    setLoading(true);
+    const fetchProfile = async () => {
+      setLoading(true);
 
-    try {
-      /** =========================
-       *  1️⃣ Parallel base queries
-       ========================== */
-      const [userSnap, friendsSnap, postsSnap] = await Promise.all([
-        find("users", userId),
-        get("friends").where(
-          where("users", "array-contains", userId),
-          where("confirmed", "==", true),
-          limit(6)
-        ),
-        get("posts").where(
-          where("creator_id", "==", userId),
-          orderBy("date", "desc")
-        ),
-      ]);
+      try {
+        /** =========================
+         *  1️⃣ Parallel base queries
+         ========================== */
+        const [userSnap, friendsSnap, postsSnap] = await Promise.all([
+          find("users", userId),
+          get("friends").where(
+            where("users", "array-contains", userId),
+            where("confirmed", "==", true),
+            limit(6)
+          ),
+          get("posts").where(
+            where("creator_id", "==", userId),
+            orderBy("date", "desc")
+          ),
+        ]);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      const profileData: any = userSnap.data();
-      setProfile(profileData);
+        const profileData: any = userSnap.data();
+        setProfile(profileData);
 
-      /** =========================
-       *  2️⃣ Friends list + count
-       ========================== */
-      const _friends = friendsSnap.docs.map(f => {
-        const d = f.data();
-        const otherUserId = d.users[0] === userId ? d.users[1] : d.users[0];
-        return {
-          id: f.id,
-          user_id: otherUserId,
-          ...d.details[otherUserId],
-        };
-      });
-
-      setFriends(_friends);
-
-      if (_friends.length < 6) {
-        setFriendsCount(_friends.length);
-      } else {
-        const _count = await count("friends").where(
-          where("users", "array-contains", userId),
-          where("confirmed", "==", true)
-        );
-        setFriendsCount(_count);
-      }
-
-      /** =========================
-       *  3️⃣ Optimize posts (parallel shared + comments)
-       ========================== */
-      const _posts = await Promise.all(
-        postsSnap.docs.map(async dc => {
-          const d = dc.data();
-
-          // fetch shared post + comments in parallel
-          const [sharedSnap, commentSnap] = await Promise.all([
-            d.shared_post_id ? find("posts", d.shared_post_id) : Promise.resolve(null),
-            all("posts", dc.id, "comments")
-          ]);
-
+        /** =========================
+         *  2️⃣ Friends list + count
+         ========================== */
+        const _friends = friendsSnap.docs.map(f => {
+          const d = f.data();
+          const otherUserId = d.users[0] === userId ? d.users[1] : d.users[0];
           return {
-            id: dc.id,
-            ...d,
-            liked: Array.isArray(d.liked_by_ids) ? d.liked_by_ids.includes(userId) : false,
-            showComments: false,
-            shared: sharedSnap?.data() ?? null,
-            comments: commentSnap.docs.map(c => ({
-              id: c.id,
-              ...c.data()
-            })),
-            date_ago: computeTimePassed(d.date.toDate())
+            id: f.id,
+            user_id: otherUserId,
+            ...d.details[otherUserId],
           };
-        })
-      );
+        });
 
-      if (!mounted) return;
-      setPosts(_posts);
+        setFriends(_friends);
 
-    } catch (err) {
-      console.error(err);
-    } finally {
-      if (mounted) setLoading(false);
-    }
-  };
+        if (_friends.length < 6) {
+          setFriendsCount(_friends.length);
+        } else {
+          const _count = await count("friends").where(
+            where("users", "array-contains", userId),
+            where("confirmed", "==", true)
+          );
+          setFriendsCount(_count);
+        }
 
-  fetchProfile();
+        /** =========================
+         *  3️⃣ Optimize posts (parallel shared + comments)
+         ========================== */
+        const _posts = await Promise.all(
+          postsSnap.docs.map(async dc => {
+            const d = dc.data();
 
-  return () => {
-    mounted = false;
-  };
-}, []);
+            // fetch shared post + comments in parallel
+            const [sharedSnap, commentSnap] = await Promise.all([
+              d.shared_post_id ? find("posts", d.shared_post_id) : Promise.resolve(null),
+              all("posts", dc.id, "comments")
+            ]);
+
+            return {
+              id: dc.id,
+              ...d,
+              liked: Array.isArray(d.liked_by_ids) ? d.liked_by_ids.includes(userId) : false,
+              showComments: false,
+              shared: sharedSnap?.data() ?? null,
+              comments: commentSnap.docs.map(c => ({
+                id: c.id,
+                ...c.data()
+              })),
+              date_ago: computeTimePassed(d.date.toDate())
+            };
+          })
+        );
+
+        if (!mounted) return;
+        setPosts(_posts);
+
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
 
   // const dummyprofile = {

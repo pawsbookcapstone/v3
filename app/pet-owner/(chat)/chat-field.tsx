@@ -4,6 +4,8 @@ import { add, find, set } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
+import { useLoadingHook } from "@/hooks/loadingHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
@@ -17,7 +19,7 @@ import {
   query,
   serverTimestamp,
 } from "firebase/firestore";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -55,7 +57,9 @@ const ChatField = () => {
 
   const flatListRef = useRef<FlatList>(null);
 
-  useEffect(() => {
+  const renderLoadingButton = useLoadingHook(true)
+
+  useOnFocusHook(() => {
     if (!userId) return
     
     const createDetails = async () => {
@@ -88,7 +92,7 @@ const ChatField = () => {
     return () => {
       unsubscribe();
     };
-  }, [userId]);
+  }, []);
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -129,10 +133,8 @@ const ChatField = () => {
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert("Permission to access camera is required!");
-      return;
-    }
+    if (!permissionResult.granted) 
+      throw "Permission to access camera is required!";
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -162,26 +164,25 @@ const ChatField = () => {
         otherUserImgPath: otherUserImgPath ?? null,
       },
     });
-
-    // const newMessage: TMessage = {
-    //   id: Date.now().toString(),
-    //   image: result.assets[0].uri,
-    //   sender: "me",
-    //   text: "",
-    // };
-    // setMessages((prev) => [...prev, newMessage]); // append
-
-    // setTimeout(() => {
-    //   flatListRef.current?.scrollToEnd({ animated: true });
-    // }, 100);
   };
 
-  const handleSeeProfile = () => {
+  const handleSeeProfile = async () => {
     if (otherUserId === userId) {
       router.push("/pet-owner/profile");
       return;
     }
 
+    const d = await find("users", otherUserId)
+    const isPage = d.data()?.is_page ?? false
+    
+    if (isPage){
+      router.push({
+        pathname: "/other-user/profile",
+        params: { pageId: otherUserId },
+      });
+      return
+    }
+    
     router.push({
       pathname: "/usable/user-profile",
       params: { userToViewId: otherUserId },
@@ -280,13 +281,25 @@ const ChatField = () => {
 
           {/* Input Row */}
           <View style={styles.inputRow}>
-            <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
+            {renderLoadingButton({
+              style: styles.iconButton,
+              children: <MaterialIcons
+                name="photo-camera"
+                size={24}
+                color={Colors.primary}
+              />,
+              hideLoadingText: true,
+              spinnerColor: Colors.primary,
+              spinnerSize: 24,
+              onPress: pickImage
+            })}
+            {/* <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
               <MaterialIcons
                 name="photo-camera"
                 size={24}
                 color={Colors.primary}
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TextInput
               style={styles.input}

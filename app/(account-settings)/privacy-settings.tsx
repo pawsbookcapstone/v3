@@ -1,12 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
 import { find, set } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 const PrivacySettings = () => {
@@ -14,7 +15,7 @@ const PrivacySettings = () => {
 
   const [isOnline, setIsOnline] = useState(true);
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     const fetch = async () => {
       const snap = await find("users", userId);
       setIsOnline(snap.data()?.online_status ?? true);
