@@ -6,7 +6,7 @@ import { useAppContext } from "@/AppsProvider";
 import { HapticTab } from "@/components/haptic-tab";
 import { db } from "@/helpers/firebase";
 import { Colors } from "@/shared/colors/Colors";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 
 export default function TabLayout() {
   const { userId, isPage } = useAppContext();
@@ -15,17 +15,10 @@ export default function TabLayout() {
   useEffect(() => {
     if (!userId) return;
 
-    const q = collection(db, "friends");
+    const q = query(collection(db, "friends"), where("users", 'array-contains', userId), where('confirmed', '==', false));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const count = snapshot.docs.filter((doc) => {
-        const d = doc.data();
-        return (
-          !d.confirmed &&
-          d.users.includes(userId) &&
-          d.users[1] === userId
-        );
-      }).length;
+      const count = snapshot.docs.filter((doc) => doc.data().users[1] === userId).length;
 
       setPendingRequests(count);
     });

@@ -1,6 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
-import { add, get, set, where } from "@/helpers/db";
+import { add, collectionName, set } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { useNotifHook } from "@/helpers/notifHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -29,7 +29,7 @@ const GroupChat = () => {
   const { chatDetailsStr }:{chatDetailsStr:string}= useLocalSearchParams();
   const [chatDetails] = useState(JSON.parse(chatDetailsStr))
 
-  const [users, setUsers] = useState<any>({})
+  // const [users, setUsers] = useState<any>({})
 
   const [messages, setMessages] = useState<any>([
   ]);
@@ -42,43 +42,45 @@ const GroupChat = () => {
   useEffect(() => {
     if (!userId) return
 
-    get('users').where(where('id', '!=', userId), where('id', 'in', chatDetails.users))
-    .then(({docs})=>{
-      let _users:any = {}
+    let unsubscribe:any = null
 
-      for (const u of docs){
-        const h = u.data()
-        _users[u.id] = {
-          name: `${h.firstname} ${h.lastname}`,
-          avatar: h.img_path
+    collectionName('users')
+      .whereNotEquals('id', userId)
+      .whereIn('id', chatDetails.users)
+      .get()
+      .then(({docs})=>{
+        let users:any = {}
+
+        for (const u of docs){
+          const h = u.data()
+          users[u.id] = {
+            name: `${h.firstname} ${h.lastname}`,
+            avatar: h.img_path
+          }
         }
-      }
 
-      setUsers(_users)
-    })
-
-    const messageQuery = query(
-      collection(db, "chats", chatDetails.id, "messages"),
-      orderBy("sent_at", "asc"),
-    );
-    const unsubscribe = onSnapshot(messageQuery, (snapshot) => {
-      setMessages(snapshot.docs.map((f) => {
-        const a = f.data()
-        
-        const yourMessage = a.sender_id === userId
-        const _user = yourMessage ? {} : users[a.sender_id]
-        return {
-          id: f.id,
-          message: a.message,
-          img_path: a.img_path,
-          yourMessage: yourMessage,
-          ..._user,
-        }
-      }));
-    });
-
+        const messageQuery = query(
+          collection(db, "chats", chatDetails.id, "messages"),
+          orderBy("sent_at", "asc"),
+        );
+        unsubscribe = onSnapshot(messageQuery, (snapshot) => {
+          setMessages(snapshot.docs.map((f) => {
+            const a = f.data()
+            
+            const yourMessage = a.sender_id === userId
+            const _user = yourMessage ? {} : users[a.sender_id]
+            return {
+              id: f.id,
+              message: a.message,
+              img_path: a.img_path,
+              yourMessage: yourMessage,
+              ..._user,
+            }
+          }));
+        });
+      })
     return () => {
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, [userId])
 

@@ -17,9 +17,9 @@ export function useNotificationHook(){
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-        const count = snapshot.docs.length;
+            const count = snapshot.docs.length;
 
-        setHasNotif(count > 0);
+            setHasNotif(count > 0);
         });
 
         return () => {
