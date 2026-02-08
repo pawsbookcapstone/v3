@@ -1,4 +1,4 @@
-import { add, all, get, remove, update } from "@/helpers/db";
+import { add, all, get, remove, set, update } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -104,7 +104,7 @@ export default function CreatePageScreen() {
   const [requests, setRequests] = useState<JoinRequest[]>([]);
 
   //approve
-  const handleApprove = (user: any) => {
+  const handleApprove = async (user: any) => {
     add("groups", groupidStr, "members").value({
       userId: user.id,
       userName: user.userName,
@@ -115,12 +115,15 @@ export default function CreatePageScreen() {
     update("groups", groupidStr).value({
       members: Number(membersNumber) + 1,
     });
-
-    add("users", user.id, "joined-groups").value({
-      groupId: groupidStr,
-      groupName: pageName,
-      joinedAt: serverTimestamp(),
-    });
+    try {
+      await set("users", user.id, "joined-groups", groupidStr).value({
+        groupId: groupidStr,
+        groupName: pageName,
+        joinedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error updating member count:", error);
+    }
 
     fetchGroupMembers();
     setMembers((prev) => [...prev, { ...user, role: "Member" }]);
