@@ -81,6 +81,7 @@ const GroupChat = () => {
                 id: f.id,
                 message: a.message,
                 img_path: a.img_path,
+                sender_id: a.sender_id,
                 yourMessage: yourMessage,
                 ..._user,
               };
@@ -169,7 +170,12 @@ const GroupChat = () => {
       ]}
     >
       {!item.yourMessage && item.avatar && (
-        <Image source={{ uri: item.avatar }} style={styles.senderAvatar} />
+        <TouchableOpacity onPress={() => router.push({
+          pathname: '/usable/user-profile',
+          params: {userToViewId: item.sender_id}
+        })}>
+          <Image source={{ uri: item.avatar }} style={styles.senderAvatar} />
+        </TouchableOpacity>
       )}
 
       <View>

@@ -5,26 +5,34 @@ import { Image, ImageSourcePropType, View } from "react-native";
 import { useAppContext } from "@/AppsProvider";
 import { HapticTab } from "@/components/haptic-tab";
 import { db } from "@/helpers/firebase";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
 
 export default function TabLayout() {
   const { userId, isPage } = useAppContext();
-  const [pendingRequests, setPendingRequests] = useState(0);
+  const [hasPendingRequests, setHasPendingRequests] = useState(false);
+  const [focused, setFocused] = useState(true);
+
+
+  useOnFocusHook(() => {
+    setFocused(true)
+    return () => setFocused(false)
+  }, [])
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !focused) return;
 
-    const q = query(collection(db, "friends"), where("users", 'array-contains', userId), where('confirmed', '==', false));
+    const q = query(collection(db, "friends"), where("users", 'array-contains', userId), where('confirmed', '==', false), limit(1));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const count = snapshot.docs.filter((doc) => doc.data().users[1] === userId).length;
 
-      setPendingRequests(count);
+      setHasPendingRequests(count > 0);
     });
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, focused]);
 
   const renderIcon = (
     focused: boolean,
@@ -42,7 +50,7 @@ export default function TabLayout() {
         }}
         resizeMode="contain"
       />
-      {showBadge && pendingRequests > 0 && (
+      {showBadge && hasPendingRequests && (
         <View
           style={{
             position: "absolute",
@@ -112,7 +120,7 @@ export default function TabLayout() {
               focused,
               require("../../../assets/Icons/friend-fill.png"),
               require("../../../assets/Icons/friend-outline.png"),
-              pendingRequests > 0
+              hasPendingRequests
             ),
         }}
       />
