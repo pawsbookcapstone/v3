@@ -37,6 +37,7 @@ const Profile = () => {
   const { userToViewId } = useLocalSearchParams<{
     userToViewId: string;
   }>();
+  
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>({});
@@ -605,7 +606,7 @@ const Profile = () => {
 
             {/* Buttons */}
             <View style={styles.actionWrapper}>
-              {!isPage &&
+              {!isPage && friendStatus != "Other Request" &&
                 <Pressable
                   style={[
                     styles.actionButton,

@@ -247,7 +247,6 @@ const Notifications = () => {
       })
       return
     }
-    console.log(item.params);
     
     router.push({
       pathname: item.href,
@@ -255,15 +254,23 @@ const Notifications = () => {
     })
   }
 
+  const seeProfile = (sender_id:string) => {
+    if (sender_id === userId) {
+      router.push('/pet-owner/profile')
+      return
+    }
+    router.push({
+      pathname: '/usable/user-profile',
+      params: {
+        userToViewId: sender_id,
+      }
+    })
+  }
+
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
         <TouchableOpacity onPress={() => navigate(item)}>
     <View style={[styles.notificationItem, (!item.seen && {backgroundColor: Colors.veryLightGray} )]}>
-      <TouchableOpacity onPress={() => router.push({
-        pathname: '/usable/user-profile',
-        params: {
-          userToViewId: item.sender_id,
-        }
-      })}>
+      <TouchableOpacity onPress={() => seeProfile(item.sender_id)}>
         <Image source={{ uri: item.profile }} style={styles.avatar} />
       </TouchableOpacity>
 
