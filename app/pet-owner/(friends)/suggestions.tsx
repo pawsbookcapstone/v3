@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, get, serverTimestamp, where } from "@/helpers/db";
+import { get, serverTimestamp, set, where } from "@/helpers/db";
+import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
 import { useLoadingHook } from "@/hooks/loadingHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
@@ -105,7 +106,8 @@ const Suggestions = () => {
 
   const handleAddFriend = async (item: any) => {
     // setSentRequests((prev) => [...prev, id]);
-    const res = await add("friends").value({
+    const generatedId = generateChatId(userId, item.id)
+    set("friends", generatedId).value({
       users: [userId, item.id],
       date_requested: serverTimestamp(),
       requested_by_id: userId,
@@ -130,7 +132,7 @@ const Suggestions = () => {
       href: "/pet-owner/add-friend",
       type: "Sent Friend Request",
       params: {
-        id: res.id,
+        id: generatedId,
       }
     });
   };

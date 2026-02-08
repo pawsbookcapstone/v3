@@ -35,14 +35,9 @@ import {
 const Profile = () => {
   const { userId, userName, userImagePath, isPage } = useAppContext();
   const { userToViewId } = useLocalSearchParams<{
-    id: string;
-    name: string;
-    profileImage: string;
-    isFriend: string;
-    cover_photo: string;
-    bio?: string;
     userToViewId: string;
   }>();
+  
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>({});
@@ -532,7 +527,7 @@ const Profile = () => {
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
       <HeaderLayout noBorderRadius>
         <HeaderWithActions
-          title={`${profile.firstname} ${profile.lastname}`}
+          title={`${profile.firstname ?? ''} ${profile.lastname ?? ''}`}
           onBack={() => router.back()}
           onAction={() => router.push("/pet-owner/search")}
           actionIcon="search"
@@ -611,7 +606,7 @@ const Profile = () => {
 
             {/* Buttons */}
             <View style={styles.actionWrapper}>
-              {!isPage &&
+              {!isPage && friendStatus != "Other Request" &&
                 <Pressable
                   style={[
                     styles.actionButton,

@@ -409,7 +409,7 @@ const PageProfile = () => {
     <View style={screens.screen}>
       <HeaderLayout noBorderRadius>
         <HeaderWithActions
-          title={profile.firstname}
+          title={profile.firstname ?? ''}
           onBack={() => router.back()}
           centerTitle={true}
           onAction={() => router.push("/pet-owner/search")}

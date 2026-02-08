@@ -23,10 +23,15 @@ export default function TabLayout() {
   useEffect(() => {
     if (!userId || !focused) return;
 
-    const q = query(collection(db, "friends"), where("users", 'array-contains', userId), where('confirmed', '==', false), limit(1));
+    const q = query(collection(db, "friends"), 
+      where("users", 'array-contains', userId), 
+      where('confirmed', '==', false), 
+      where("requested_by_id", "!=", userId),
+      limit(1)
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const count = snapshot.docs.filter((doc) => doc.data().users[1] === userId).length;
+      const count = snapshot.docs.length;
 
       setHasPendingRequests(count > 0);
     });

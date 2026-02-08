@@ -7,7 +7,7 @@ export type NotifType =
   | "Like"
   | "Comment"
   | "Sent Friend Request"
-  | "Decline Friend Request"
+  | "Confirm Friend Request"
   | "Sent a Message"
   | "Sent a Image"
   | "Share";

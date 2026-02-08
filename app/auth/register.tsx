@@ -74,6 +74,7 @@ const Register = () => {
         firstname: firstname,
         lastname: lastname,
         email: email,
+        is_page: false,
         createdAt: serverTimestamp(),
         online_status: true,
         img_path:

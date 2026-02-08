@@ -28,36 +28,7 @@ const myFriends = () => {
   const {userToViewId} = useLocalSearchParams()
 
   const [search, setSearch] = useState("");
-  const [friends, setFriends] = useState<any>([
-    // {
-    //   id: "1",
-    //   name: "Jane Smith",
-    //   profilePic: "https://randomuser.me/api/portraits/women/44.jpg",
-    //   mutualFriends: 10,
-    //   online: true,
-    // },
-    // {
-    //   id: "2",
-    //   name: "Michael Johnson",
-    //   profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
-    //   mutualFriends: 5,
-    //   online: false,
-    // },
-    // {
-    //   id: "3",
-    //   name: "Emily Davis",
-    //   profilePic: "https://randomuser.me/api/portraits/women/68.jpg",
-    //   mutualFriends: 8,
-    //   online: true,
-    // },
-    // {
-    //   id: "4",
-    //   name: "David Wilson",
-    //   profilePic: "https://randomuser.me/api/portraits/men/45.jpg",
-    //   mutualFriends: 2,
-    //   online: false,
-    // },
-  ]);
+  const [friends, setFriends] = useState<any>([]);
 
   const [selectedFriend, setSelectedFriend] = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
