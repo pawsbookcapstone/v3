@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import {
   FlatList,
   Image,
+  Pressable,
   StyleSheet,
   Switch,
   Text,
@@ -26,6 +27,7 @@ type Member = {
   userName: string;
   role: "Admin" | "Member";
   userImagePath?: string;
+  userId: string;
 };
 
 type JoinRequest = {
@@ -33,6 +35,7 @@ type JoinRequest = {
   userName: string;
   answers: [String];
   userImagePath?: string;
+  userId: string;
 };
 
 export default function CreatePageScreen() {
@@ -69,6 +72,7 @@ export default function CreatePageScreen() {
       return {
         id: doc.id, // React key
         // memberId: data.memberId, // Firestore ID
+        userId: data.userId,
         userName: data.userName,
         role: data.role,
         userImagePath: data.userImagePath,
@@ -86,6 +90,7 @@ export default function CreatePageScreen() {
       const data = doc.data() as JoinRequest;
       return {
         id: doc.id, // React key
+        userId: data.userId,
         answers: data.answers,
         userName: data.userName,
         userImagePath: data.userImagePath,
@@ -180,7 +185,17 @@ export default function CreatePageScreen() {
         data={members}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.memberCard}>
+          <Pressable
+            style={styles.memberCard}
+            onPress={() =>
+              router.push({
+                pathname: "/usable/user-profile",
+                params: {
+                  userToViewId: item.userId,
+                },
+              })
+            }
+          >
             <View style={styles.userRow}>
               <Image
                 source={{ uri: item.userImagePath }}
@@ -194,7 +209,7 @@ export default function CreatePageScreen() {
                 </View>
               </View>
             </View>
-          </View>
+          </Pressable>
         )}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No members yet</Text>
@@ -211,7 +226,17 @@ export default function CreatePageScreen() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.requestCard}>
-                <View style={styles.userRow}>
+                <Pressable
+                  style={styles.userRow}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/usable/user-profile",
+                      params: {
+                        userToViewId: item.userId,
+                      },
+                    })
+                  }
+                >
                   <Image
                     source={{ uri: item.userImagePath }}
                     style={styles.avatar}
@@ -221,7 +246,7 @@ export default function CreatePageScreen() {
                     <Text style={styles.cardTitle}>{item.userName}</Text>
                     <Text style={styles.cardSub}>Request to join</Text>
                   </View>
-                </View>
+                </Pressable>
 
                 <View style={styles.actionsRow}>
                   <TouchableOpacity
