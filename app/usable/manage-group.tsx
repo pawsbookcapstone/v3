@@ -1,17 +1,19 @@
-import { all, get, update } from "@/helpers/db";
+import { add, all, get, remove, update } from "@/helpers/db";
+import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { router, useLocalSearchParams } from "expo-router";
 import { documentId, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface Group {
@@ -19,72 +21,107 @@ interface Group {
   privacy: "Private" | "Public";
   // add other fields if needed
 }
+type Member = {
+  id: string;
+  userName: string;
+  role: "Admin" | "Member";
+  userImagePath?: string;
+};
+
+type JoinRequest = {
+  id: string;
+  userName: string;
+  answers: [String];
+  userImagePath?: string;
+};
 
 export default function CreatePageScreen() {
   const [pageName, setPageName] = useState("");
   const [isPrivate, setIsPrivate] = useState(true);
-  const { groupId } = useLocalSearchParams();
+  const { groupId, membersNumber } = useLocalSearchParams();
   const groupidStr = String(groupId);
 
+  // Fetch group details using the groupId
+  const fetchGroupDetails = async () => {
+    const snapshot = await get("groups").where(
+      where(documentId(), "==", groupidStr),
+    );
+
+    const groups = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Group),
+    }));
+
+    if (groups.length > 0) {
+      const group = groups[0];
+      setPageName(group.title);
+      setIsPrivate(group.privacy === "Private");
+    }
+    console.log("Fetched group details:", pageName);
+  };
+
+  //fetch members List
+  const fetchGroupMembers = async () => {
+    const snapshot = await all("groups", groupidStr, "members");
+
+    const members = snapshot.docs.map((doc) => {
+      const data = doc.data() as Member;
+      return {
+        id: doc.id, // React key
+        // memberId: data.memberId, // Firestore ID
+        userName: data.userName,
+        role: data.role,
+        userImagePath: data.userImagePath,
+      };
+    });
+    setMembers(members);
+    console.log("Fetched group members:", members);
+  };
+
+  //fetch members List
+  const fetchJoinRequests = async () => {
+    const snapshot = await all("groups", groupidStr, "join-request");
+
+    const requests = snapshot.docs.map((doc) => {
+      const data = doc.data() as JoinRequest;
+      return {
+        id: doc.id, // React key
+        answers: data.answers,
+        userName: data.userName,
+        userImagePath: data.userImagePath,
+      };
+    });
+    setRequests(requests);
+    console.log("Fetched group join requests:", requests);
+  };
   useEffect(() => {
-    // Fetch group details using the groupId
-    const fetchGroupDetails = async () => {
-      const snapshot = await get("groups").where(
-        where(documentId(), "==", groupidStr),
-      );
-
-      const groups = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Group),
-      }));
-
-      if (groups.length > 0) {
-        const group = groups[0];
-        setPageName(group.title);
-        setIsPrivate(group.privacy === "Private");
-      }
-      console.log("Fetched group details:", pageName);
-    };
-
-    //fetch members List
-    const fetchGroupMembers = async () => {
-      const snapshot = await all("groups", groupidStr, "members");
-
-      const groups = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Group),
-      }));
-
-      if (groups.length > 0) {
-        const group = groups[0];
-        setPageName(group.title);
-        setIsPrivate(group.privacy === "Private");
-      }
-      console.log("Fetched group details:", pageName);
-    };
-
+    fetchGroupMembers();
     fetchGroupDetails();
+    fetchJoinRequests();
   }, []);
 
-  // MEMBERS STATE
-  const [members, setMembers] = useState([
-    { id: "1", name: "Juan Dela Cruz", role: "Admin" },
-    { id: "2", name: "Maria Santos", role: "Member" },
-  ]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [requests, setRequests] = useState<JoinRequest[]>([]);
 
-  // USERS WAITING FOR APPROVAL
-  const [requests, setRequests] = useState([
-    { id: "3", name: "Ana Lopez" },
-    { id: "4", name: "Carlos Mendoza" },
-  ]);
-
-  // APPROVE USER
+  //approve
   const handleApprove = (user: any) => {
+    add("groups", groupidStr, "members").value({
+      userId: user.id,
+      userName: user.userName,
+      userImagePath: user.userImagePath,
+      role: "Member",
+    });
+    remove("groups", groupidStr, "join-request", user.id);
+    update("groups", groupidStr).value({
+      members: Number(membersNumber) + 1,
+    });
+
+    fetchGroupMembers();
     setMembers((prev) => [...prev, { ...user, role: "Member" }]);
     setRequests((prev) => prev.filter((u) => u.id !== user.id));
   };
 
-  // REJECT USER
+  //reject
   const handleReject = (userId: string) => {
     setRequests((prev) => prev.filter((u) => u.id !== userId));
   };
@@ -100,6 +137,7 @@ export default function CreatePageScreen() {
       alert("Failed to save changes. Try again.");
       return;
     }
+    router.back();
     alert("Group details saved!");
   };
 
@@ -133,9 +171,20 @@ export default function CreatePageScreen() {
         data={members}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            <Text style={styles.cardSub}>{item.role}</Text>
+          <View style={styles.memberCard}>
+            <View style={styles.userRow}>
+              <Image
+                source={{ uri: item.userImagePath }}
+                style={styles.avatar}
+              />
+
+              <View style={styles.userInfo}>
+                <Text style={styles.cardTitle}>{item.userName}</Text>
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleText}>{item.role}</Text>
+                </View>
+              </View>
+            </View>
           </View>
         )}
         ListEmptyComponent={
@@ -152,22 +201,32 @@ export default function CreatePageScreen() {
             data={requests}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <View style={[styles.card, styles.requestCard]}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
+              <View style={styles.requestCard}>
+                <View style={styles.userRow}>
+                  <Image
+                    source={{ uri: item.userImagePath }}
+                    style={styles.avatar}
+                  />
+
+                  <View style={styles.userInfo}>
+                    <Text style={styles.cardTitle}>{item.userName}</Text>
+                    <Text style={styles.cardSub}>Request to join</Text>
+                  </View>
+                </View>
 
                 <View style={styles.actionsRow}>
                   <TouchableOpacity
                     style={[styles.button, styles.approveBtn]}
                     onPress={() => handleApprove(item)}
                   >
-                    <Text style={styles.buttonText}>Approve</Text>
+                    <Text style={styles.approveText}>Approve</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[styles.button, styles.rejectBtn]}
                     onPress={() => handleReject(item.id)}
                   >
-                    <Text style={styles.buttonText}>Reject</Text>
+                    <Text style={styles.rejectText}>Reject</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -222,39 +281,39 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 8,
   },
-  requestCard: {
-    backgroundColor: "#fff7ed",
-  },
-  cardTitle: {
-    fontWeight: "600",
-    fontSize: 15,
-  },
-  cardSub: {
-    color: "#6b7280",
-    marginTop: 2,
-  },
-  actionsRow: {
-    flexDirection: "row",
-    marginTop: 10,
-  },
-  button: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 6,
-    marginRight: 10,
-  },
-  approveBtn: {
-    backgroundColor: "#16a34a",
-  },
-  rejectBtn: {
-    backgroundColor: "#dc2626",
-  },
+  // requestCard: {
+  //   backgroundColor: "#fff7ed",
+  // },
+  // cardTitle: {
+  //   fontWeight: "600",
+  //   fontSize: 15,
+  // },
+  // cardSub: {
+  //   color: "#6b7280",
+  //   marginTop: 2,
+  // },
+  // actionsRow: {
+  //   flexDirection: "row",
+  //   marginTop: 10,
+  // },
+  // button: {
+  //   paddingVertical: 8,
+  //   paddingHorizontal: 14,
+  //   borderRadius: 6,
+  //   marginRight: 10,
+  // },
+  // approveBtn: {
+  //   backgroundColor: "#16a34a",
+  // },
+  // rejectBtn: {
+  //   backgroundColor: "#dc2626",
+  // },
   buttonText: {
     color: "#ffffff",
     fontWeight: "600",
   },
   createBtn: {
-    backgroundColor: "#2563eb",
+    backgroundColor: Colors.primary,
     padding: 16,
     borderRadius: 10,
     marginTop: 30,
@@ -269,5 +328,111 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#9ca3af",
     marginVertical: 12,
+  },
+  // avatar: {
+  //   width: 50,
+  //   height: 50,
+  //   borderRadius: 25,
+  //   marginRight: 12,
+  //   backgroundColor: Colors.lightGray,
+  // },
+  requestCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#eee",
+  },
+
+  userInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+  },
+
+  cardSub: {
+    fontSize: 13,
+    color: "#6b7280", // gray-500
+    marginTop: 2,
+  },
+
+  actionsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  button: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  approveBtn: {
+    backgroundColor: "#16a34a", // green-600
+  },
+
+  rejectBtn: {
+    backgroundColor: "#fee2e2", // red-100
+  },
+
+  approveText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  rejectText: {
+    color: "#dc2626", // red-600
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  memberCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  roleBadge: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+    backgroundColor: "#e0f2fe", // light blue
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+
+  roleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0284c7", // blue-600
   },
 });

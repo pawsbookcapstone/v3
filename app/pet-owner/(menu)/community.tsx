@@ -232,7 +232,7 @@ const Community = () => {
       <HeaderLayout noBorderRadius bottomBorder>
         <HeaderWithActions
           title="Community"
-          onBack={() => router.back()}
+          onBack={() => router.push("/pet-owner/(tabs)/menu")}
           centerTitle
         />
       </HeaderLayout>

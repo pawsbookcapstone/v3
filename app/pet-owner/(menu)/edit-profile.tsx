@@ -26,12 +26,17 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from "react-native";
 
 const EditProfile = () => {
-  const { userId, setUserFirstName, setUserLastName, setUserImagePath, isPage } =
-    useAppContext();
+  const {
+    userId,
+    setUserFirstName,
+    setUserLastName,
+    setUserImagePath,
+    isPage,
+  } = useAppContext();
 
   const [profile, setProfile] = useState<any>({
     // name: params.name || "",
@@ -49,7 +54,7 @@ const EditProfile = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [imageType, setImageType] = useState<"profile" | "cover" | null>(null);
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   useOnFocusHook(() => {
     const fetchProfile = async () => {
@@ -116,29 +121,30 @@ const EditProfile = () => {
   };
 
   const handleSave = async () => {
-      let data = { ...profile };
-      if (!data.firstname || !data.email || (!data.is_page && !data.lastname)) throw "Please fill all fields!!!"
+    let data = { ...profile };
+    if (!data.firstname || !data.email || (!data.is_page && !data.lastname))
+      throw "Please fill all fields!!!";
 
-      if (data.profile_photo) {
-        const profilePath = await uploadImageUri(data.profile_photo);
-        delete data.profile_photo;
-        data.img_path = profilePath;
-        setUserImagePath(profilePath);
-      }
-      if (data.cover_photo) {
-        const profilePath = await uploadImageUri(data.cover_photo);
-        delete data.cover_photo;
-        data.cover_photo_path = profilePath;
-      }
-      setUserFirstName(data.firstname);
-      setUserLastName(data.lastname);
-      set("users", userId).value(data);
-      updateUserProfile(
-        userId,
-        `${data.firstname} ${data.lastname}`,
-        data.img_path,
-      );
-      router.back();
+    if (data.profile_photo) {
+      const profilePath = await uploadImageUri(data.profile_photo);
+      delete data.profile_photo;
+      data.img_path = profilePath;
+      setUserImagePath(profilePath);
+    }
+    if (data.cover_photo) {
+      const profilePath = await uploadImageUri(data.cover_photo);
+      delete data.cover_photo;
+      data.cover_photo_path = profilePath;
+    }
+    setUserFirstName(data.firstname);
+    setUserLastName(data.lastname);
+    set("users", userId).value(data);
+    updateUserProfile(
+      userId,
+      `${data.firstname} ${data.lastname}`,
+      data.img_path,
+    );
+    router.back();
   };
 
   return (
@@ -189,7 +195,7 @@ const EditProfile = () => {
               <Pressable onPress={() => openImagePicker("profile")}>
                 {profile.profile_photo || profile.img_path ? (
                   <ProfileImage
-                  // <Image
+                    // <Image
                     source={{ uri: profile.profile_photo ?? profile.img_path }}
                     style={styles.profileImage}
                   />
@@ -259,7 +265,8 @@ const EditProfile = () => {
                     </Text>
                   </View>
                 </>
-              ): <>
+              ) : (
+                <>
                   <Text style={styles.label}>First Name*</Text>
                   <TextInput
                     style={styles.input}
@@ -273,7 +280,7 @@ const EditProfile = () => {
                     onChangeText={(text) => handleChange("lastname", text)}
                   />
                 </>
-              }
+              )}
 
               <Text style={styles.label}>Email*</Text>
               <TextInput
@@ -321,7 +328,7 @@ const EditProfile = () => {
             {renderLoadingButton({
               style: styles.saveButton,
               children: <Text style={styles.saveButtonText}>Save Changes</Text>,
-              onPress: handleSave
+              onPress: handleSave,
             })}
             {/* <Pressable style={styles.saveButton} onPress={handleSave}>
               <Text style={styles.saveButtonText}>Save Changes</Text>

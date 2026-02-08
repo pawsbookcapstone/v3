@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { all, remove, serverTimestamp, set, update } from "@/helpers/db";
+import { all, get, remove, serverTimestamp, set, update } from "@/helpers/db";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -12,6 +12,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { documentId, where } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -49,6 +50,16 @@ interface Post {
   newComment: string;
 }
 
+interface Group {
+  id: string;
+  title: string;
+  members: number;
+  profile: string;
+  privacy: "Private" | "Public";
+  description?: string;
+  // questions: string[];
+}
+
 export default function GroupProfile() {
   const { userId, userName, userImagePath } = useAppContext();
   const { id, title, members, profile, type, privacy, questions } =
@@ -61,6 +72,8 @@ export default function GroupProfile() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [answers, setAnswers] = useState(["", "", ""]);
+
+  const [pageDetails, setPageDetails] = useState<Group | null>(null);
 
   let membershipQuestions: string[] = [];
 
@@ -118,13 +131,31 @@ export default function GroupProfile() {
             newComment: data.newComment || "",
           };
         });
-
         setPosts(items);
         // console.log("Fetched posts:", items);
       } catch (error) {
         console.error("Error fetching posts:", error);
       }
     };
+
+    const fetchPageDetails = async () => {
+      const groups = await get("groups").where(
+        where(documentId(), "==", groupId),
+      );
+      setPageDetails(groups.docs[0].data() as Group);
+    };
+
+    //check join request status
+
+    const fetchJoinStatus = async () => {
+      const groups = await get("groups", groupId, "join-request").where(
+        where(documentId(), "==", userId),
+      );
+      setJoinRequestSent(!groups.empty);
+    };
+
+    fetchPageDetails();
+    fetchJoinStatus();
     fetchPosts();
   }, []);
 
@@ -239,7 +270,23 @@ export default function GroupProfile() {
     }
   };
 
+  const handleCancelJoinRequest = async () => {
+    try {
+      await remove("groups", groupId, "join-request", userId);
+    } catch (error) {
+      console.error("Error cancelling join request:", error);
+    }
+    setJoinRequestSent(false);
+    ToastAndroid.show("Join request cancelled.", ToastAndroid.SHORT);
+  };
+
   const handleSubmitAnswers = async () => {
+    console.log("Submitting answers:", answers);
+    if (answers.every((a) => a.trim() === "")) {
+      alert("Please answer all questions before submitting.");
+      return;
+    }
+
     setShowQuestionModal(false);
 
     try {
@@ -255,6 +302,8 @@ export default function GroupProfile() {
         userId,
         answers: cleanAnswers,
         joinedAt: serverTimestamp(),
+        userImagePath,
+        userName,
       });
 
       ToastAndroid.show(
@@ -298,10 +347,13 @@ export default function GroupProfile() {
         </View>
 
         <View style={styles.groupInfo}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{pageDetails?.title}</Text>
+          <Text style={[styles.members, { fontWeight: "600", marginLeft: 15 }]}>
+            {pageDetails?.description}
+          </Text>
           <View style={{ flexDirection: "row", marginLeft: 15 }}>
             <Text style={[styles.members, { fontWeight: "600" }]}>
-              {members}
+              {pageDetails?.members}
             </Text>
             <Text style={styles.members}> members</Text>
           </View>
@@ -321,13 +373,17 @@ export default function GroupProfile() {
             ]}
             onPress={() => {
               if (type === "Suggestion") {
-                handleJoinGroup();
+                if (joinRequestSent) {
+                  handleCancelJoinRequest();
+                } else {
+                  handleJoinGroup();
+                }
               } else if (type === "JoinedGroup") {
                 setShowLeaveModal(true);
               } else if (type === "MyGroup") {
                 router.push({
                   pathname: "/usable/manage-group",
-                  params: { groupId: groupId },
+                  params: { groupId: groupId, membersNumber: members },
                 });
               }
             }}
@@ -387,144 +443,183 @@ export default function GroupProfile() {
           ))}
 
         {/*  Posts Section */}
-        <View style={styles.postsSection}>
-          {posts.map((post) => {
-            const postImages = post.images ?? [];
+        {/* Only show posts if not a private group suggestion */}
+        {!(privacy === "Private" && type === "Suggestion") && (
+          <View style={styles.postsSection}>
+            {posts.map((post) => {
+              const postImages = post.images ?? [];
+              const maxImagesToShow = 3;
+              const extraImages = postImages.length - maxImagesToShow;
 
-            const maxImagesToShow = 3;
-            const extraImages = postImages.length - maxImagesToShow;
+              return (
+                <View style={styles.postsSection}>
+                  {posts.map((post) => {
+                    const postImages = post.images ?? [];
 
-            return (
-              <View key={post.id} style={styles.postCard}>
-                {/* Header */}
-                <View style={styles.postHeader}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      flex: 1,
-                    }}
-                  >
-                    <Image
-                      source={{ uri: post.profileImage }}
-                      style={styles.profileImage}
-                    />
-                    <View style={{ marginLeft: 8 }}>
-                      <Text style={styles.userName}>{post.user}</Text>
-                      <Text style={styles.postTime}>{post.time}</Text>
-                    </View>
-                  </View>
+                    const maxImagesToShow = 3;
+                    const extraImages = postImages.length - maxImagesToShow;
 
-                  <Entypo
-                    name="dots-three-horizontal"
-                    size={18}
-                    color="#555"
-                    style={{ marginRight: 5 }}
-                  />
-                </View>
+                    return (
+                      <View key={post.id} style={styles.postCard}>
+                        {/* Header */}
+                        <View style={styles.postHeader}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              flex: 1,
+                            }}
+                          >
+                            <Image
+                              source={{ uri: post.profileImage }}
+                              style={styles.profileImage}
+                            />
+                            <View style={{ marginLeft: 8 }}>
+                              <Text style={styles.userName}>{post.user}</Text>
+                              <Text style={styles.postTime}>{post.time}</Text>
+                            </View>
+                          </View>
 
-                {/* Content */}
-                {post.content ? (
-                  <Text style={styles.postContent}>{post.content}</Text>
-                ) : null}
+                          <Entypo
+                            name="dots-three-horizontal"
+                            size={18}
+                            color="#555"
+                            style={{ marginRight: 5 }}
+                          />
+                        </View>
 
-                {/* Image Grid */}
-                {postImages.length > 0 && (
-                  <View style={styles.imageGrid}>
-                    {postImages.slice(0, maxImagesToShow).map((img, idx) => (
-                      <Pressable
-                        key={idx}
-                        style={styles.imageWrapper}
-                        onPress={() => {
-                          setSelectedPostImages(postImages);
-                          setSelectedIndex(idx);
-                          setImageModalVisible(true);
-                        }}
-                      >
-                        <Image source={{ uri: img }} style={styles.gridImage} />
-                        {idx === maxImagesToShow - 1 && extraImages > 0 && (
-                          <View style={styles.overlay}>
-                            <Text style={styles.overlayText}>
-                              +{extraImages}
-                            </Text>
+                        {/* Content */}
+                        {post.content ? (
+                          <Text style={styles.postContent}>{post.content}</Text>
+                        ) : null}
+
+                        {/* Image Grid */}
+                        {postImages.length > 0 && (
+                          <View style={styles.imageGrid}>
+                            {postImages
+                              .slice(0, maxImagesToShow)
+                              .map((img, idx) => (
+                                <Pressable
+                                  key={idx}
+                                  style={styles.imageWrapper}
+                                  onPress={() => {
+                                    setSelectedPostImages(postImages);
+                                    setSelectedIndex(idx);
+                                    setImageModalVisible(true);
+                                  }}
+                                >
+                                  <Image
+                                    source={{ uri: img }}
+                                    style={styles.gridImage}
+                                  />
+                                  {idx === maxImagesToShow - 1 &&
+                                    extraImages > 0 && (
+                                      <View style={styles.overlay}>
+                                        <Text style={styles.overlayText}>
+                                          +{extraImages}
+                                        </Text>
+                                      </View>
+                                    )}
+                                </Pressable>
+                              ))}
                           </View>
                         )}
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
 
-                {/* Actions */}
-                <View style={styles.actionsRow}>
-                  <Pressable
-                    onPress={() => toggleLike(post.id)}
-                    style={styles.actionBtn}
-                  >
-                    <Ionicons
-                      name={post.liked ? "heart-sharp" : "heart-outline"}
-                      size={23}
-                      color={post.liked ? "red" : "black"}
-                    />
-                    <Text style={styles.countText}>{post.likes}</Text>
-                  </Pressable>
+                        {/* Actions */}
+                        <View style={styles.actionsRow}>
+                          <Pressable
+                            onPress={() => toggleLike(post.id)}
+                            style={styles.actionBtn}
+                          >
+                            <Ionicons
+                              name={
+                                post.liked ? "heart-sharp" : "heart-outline"
+                              }
+                              size={23}
+                              color={post.liked ? "red" : "black"}
+                            />
+                            <Text style={styles.countText}>{post.likes}</Text>
+                          </Pressable>
 
-                  <Pressable
-                    onPress={() => toggleComments(post.id)}
-                    style={styles.actionBtn}
-                  >
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={20}
-                      color="black"
-                    />
-                    <Text style={styles.countText}>{post.comments.length}</Text>
-                  </Pressable>
-                </View>
-
-                {/* Comments */}
-                {post.showComments && (
-                  <View style={styles.commentSection}>
-                    {post.comments.map((comment) => (
-                      <View key={comment.id} style={styles.commentRow}>
-                        <Image
-                          source={{ uri: comment.profileImage }}
-                          style={styles.commentProfile}
-                        />
-                        <View style={styles.commentBubble}>
-                          <Text style={styles.commentUser}>{comment.user}</Text>
-                          <Text style={styles.commentText}>{comment.text}</Text>
+                          <Pressable
+                            onPress={() => toggleComments(post.id)}
+                            style={styles.actionBtn}
+                          >
+                            <Ionicons
+                              name="chatbubble-outline"
+                              size={20}
+                              color="black"
+                            />
+                            <Text style={styles.countText}>
+                              {post.comments.length}
+                            </Text>
+                          </Pressable>
                         </View>
-                      </View>
-                    ))}
 
-                    {/* Add comment */}
-                    <View style={styles.addCommentRow}>
-                      <Image
-                        source={{ uri: userImagePath }}
-                        style={styles.commentProfile}
-                      />
-                      <TextInput
-                        placeholder="Write a comment..."
-                        style={styles.commentInput}
-                        value={post.newComment}
-                        onChangeText={(text) =>
-                          setPosts((prev) =>
-                            prev.map((p) =>
-                              p.id === post.id ? { ...p, newComment: text } : p,
-                            ),
-                          )
-                        }
-                      />
-                      <Pressable onPress={() => handleAddComment(post.id)}>
-                        <Text style={styles.postCommentBtn}>Post</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
+                        {/* Comments */}
+                        {post.showComments && (
+                          <View style={styles.commentSection}>
+                            {post.comments.map((comment) => (
+                              <View key={comment.id} style={styles.commentRow}>
+                                <Image
+                                  source={{ uri: comment.profileImage }}
+                                  style={styles.commentProfile}
+                                />
+                                <View style={styles.commentBubble}>
+                                  <Text style={styles.commentUser}>
+                                    {comment.user}
+                                  </Text>
+                                  <Text style={styles.commentText}>
+                                    {comment.text}
+                                  </Text>
+                                </View>
+                              </View>
+                            ))}
+
+                            {/* Add comment */}
+                            <View style={styles.addCommentRow}>
+                              <Image
+                                source={{ uri: userImagePath }}
+                                style={styles.commentProfile}
+                              />
+                              <TextInput
+                                placeholder="Write a comment..."
+                                style={styles.commentInput}
+                                value={post.newComment}
+                                onChangeText={(text) =>
+                                  setPosts((prev) =>
+                                    prev.map((p) =>
+                                      p.id === post.id
+                                        ? { ...p, newComment: text }
+                                        : p,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Pressable
+                                onPress={() => handleAddComment(post.id)}
+                              >
+                                <Text style={styles.postCommentBtn}>Post</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {privacy === "Private" && type === "Suggestion" && (
+          <View style={styles.privateNotice}>
+            <Text style={styles.privateText}>
+              This is a private group. Only members can see posts.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* 🚪 Leave Modal */}
@@ -575,7 +670,9 @@ export default function GroupProfile() {
             <ScrollView style={{ maxHeight: 300 }}>
               {membershipQuestions.map((q, index) => (
                 <View key={index} style={{ marginBottom: 10 }}>
-                  <Text style={styles.questionLabel}>{q}</Text>
+                  <Text style={styles.questionLabel}>
+                    {q ? q : "Why do you want to join this group?"}
+                  </Text>
                   <TextInput
                     style={styles.questionInput}
                     placeholder="Your answer..."
@@ -850,5 +947,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 8,
     fontSize: 13,
+  },
+
+  privateNotice: {
+    backgroundColor: "ffffff",
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 12,
+    // shadowColor: "#000",
+    // shadowOpacity: 0.05,
+    // shadowRadius: 6,
+    // shadowOffset: { width: 0, height: 3 },
+    // elevation: 2,
+  },
+
+  privateText: {
+    color: "black",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });
