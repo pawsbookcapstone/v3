@@ -12,5 +12,6 @@ export const Colors = {
   lightBlue: "#add8e6",
   background: "#F6F6F6",
   red: "#FF0000",
-  veryLightGray: "#F2F2F2"
+  veryLightGray: "#F2F2F2",
+  disabled: "#d5b779"
 };

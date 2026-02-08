@@ -1,4 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
+import { moderateImage, moderateText } from "@/helpers/AI/ai";
+import { SafetyStatus } from "@/helpers/AI/types";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add, set } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
@@ -62,11 +64,20 @@ const PostScreen = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
+      base64: true,
     });
 
-    if (!result.canceled) {
-      setImages((prev) => [...prev, result.assets[0].uri]);
-    }
+    if (result.canceled || result.assets.length == 0) return
+
+    const asset = result.assets[0]
+    
+    const dataUrl = `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`;
+    const res = await moderateImage(dataUrl)
+
+    console.log('Image AI Result: ', res);
+    if (res.status === SafetyStatus.BLOCKED) return
+
+    setImages((prev) => [...prev, result.assets[0].uri]);
   };
 
   const takePhoto = async () => {
@@ -107,10 +118,14 @@ const PostScreen = () => {
         const temp: string[] = [];
         for (const i in images) {
           const img_url = await uploadImageUri(images[i]);
+          
           temp.push(img_url);
         }
         data.img_paths = temp;
       }
+
+      const res = await moderateText(content.trim())
+      console.log('Text AI Result: ', res);
 
       if (editPost?.id) {
         // Edit existing post

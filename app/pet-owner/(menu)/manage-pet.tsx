@@ -25,39 +25,7 @@ import {
 } from "react-native";
 
 const ManagePet = () => {
-  const [pets, setPets] = useState<{ [key: string]: any }[]>([
-    // {
-    //   id: 1,
-    //   name: "Buddy",
-    //   species: "Dog",
-    //   breed: "Golden Retriever",
-    //   gender: "Male",
-    //   age: "3 years",
-    //   vaccines: "Rabies, Parvo, Distemper",
-    //   photo: "https://placedog.net/800/600?id=1",
-    // },
-    // {
-    //   id: 2,
-    //   name: "Mittens",
-    //   species: "Cat",
-    //   breed: "Persian",
-    //   gender: "Female",
-    //   age: "2 years",
-    //   vaccines: "Feline Viral, Rabies",
-    //   photo: "",
-    // },
-    // {
-    //   id: 3,
-    //   name: "Chirpy",
-    //   species: "Bird",
-    //   breed: "Parakeet",
-    //   gender: "Male",
-    //   age: "1 year",
-    //   vaccines: "Avian Pox",
-    //   photo:
-    //     "https://upload.wikimedia.org/wikipedia/commons/4/45/Budgerigar_1.jpg",
-    // },
-  ]);
+  const [pets, setPets] = useState<{ [key: string]: any }[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPet, setSelectedPet] = useState<any>(null);
@@ -245,7 +213,7 @@ const ManagePet = () => {
       </ScrollView>
 
       {/* Floating Add Button */}
-      <TouchableOpacity style={styles.fab} onPress={handleAddPet}>
+      <TouchableOpacity disabled={pets.length >= 3} style={[styles.fab, (pets.length >= 3 && {backgroundColor: '#d5b779'})]} onPress={handleAddPet}>
         <Ionicons name="add" size={28} color={Colors.white} />
       </TouchableOpacity>
 

@@ -156,6 +156,7 @@ const AddPet = () => {
       gender: gender,
       ...data,
     });
+    router.back()
   };
 
   return (

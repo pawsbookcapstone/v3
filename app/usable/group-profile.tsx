@@ -452,14 +452,14 @@ export default function GroupProfile() {
 
               return (
                 <View style={styles.postsSection}>
-                  {posts.map((post) => {
+                  {posts.map((post, idx) => {
                     const postImages = post.images ?? [];
 
                     const maxImagesToShow = 3;
                     const extraImages = postImages.length - maxImagesToShow;
 
                     return (
-                      <View key={post.id} style={styles.postCard}>
+                      <View key={idx} style={styles.postCard}>
                         {/* Header */}
                         <View style={styles.postHeader}>
                           <View
