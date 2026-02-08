@@ -179,6 +179,7 @@ export default function GroupProfile() {
   const confirmLeaveGroup = async () => {
     try {
       await remove("users", userId, "joined-groups", groupId);
+      await remove("groups", groupId, "members", userId);
       await update("groups", groupId).value({
         members: Number(members) - 1,
       });
@@ -324,7 +325,10 @@ export default function GroupProfile() {
               } else if (type === "JoinedGroup") {
                 setShowLeaveModal(true);
               } else if (type === "MyGroup") {
-                // router.push("/pet-owner/(menu)/manage-group");
+                router.push({
+                  pathname: "/usable/manage-group",
+                  params: { groupId: groupId },
+                });
               }
             }}
           >

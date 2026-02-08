@@ -15,6 +15,7 @@ export default function Layout() {
         <Stack.Screen name="set-appointment" options={{ headerShown: false }} />
         <Stack.Screen name="success-screen" options={{ headerShown: false }} />
         <Stack.Screen name="page-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="manage-group" options={{ headerShown: false }} />
         <Stack.Screen
           name="anonymous-posting"
           options={{ headerShown: false }}
