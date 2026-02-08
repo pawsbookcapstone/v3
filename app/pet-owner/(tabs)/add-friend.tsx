@@ -19,6 +19,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -123,105 +124,137 @@ const addFriend = () => {
   //   }
   // };
   const onRefresh = async () => {
-  setRefreshing(true);
+    setRefreshing(true);
+    
+    try {
+      const snap = await all("friends");
 
-  try {
-    const snap = await all("friends");
+      const _friendRequests: any[] = [];
+      const myFriends = new Set<string>();
+      const connections = new Map<string, Set<string>>();
 
-    const _friendRequests: any[] = [];
-    const myFriends = new Set<string>();
-    const connections = new Map<string, Set<string>>();
+      for (const doc of snap.docs) {
+        const d = doc.data();
+        const [u1, u2] = d.users;
 
-    for (const doc of snap.docs) {
-      const d = doc.data();
-      const [u1, u2] = d.users;
+        // Track confirmed friendships as graph
+        if (d.confirmed) {
+          if (!connections.has(u1)) connections.set(u1, new Set());
+          if (!connections.has(u2)) connections.set(u2, new Set());
 
-      // Track confirmed friendships as graph
-      if (d.confirmed) {
-        if (!connections.has(u1)) connections.set(u1, new Set());
-        if (!connections.has(u2)) connections.set(u2, new Set());
+          connections.get(u1)!.add(u2);
+          connections.get(u2)!.add(u1);
 
-        connections.get(u1)!.add(u2);
-        connections.get(u2)!.add(u1);
+          if (u1 === userId) myFriends.add(u2);
+          if (u2 === userId) myFriends.add(u1);
 
-        if (u1 === userId) myFriends.add(u2);
-        if (u2 === userId) myFriends.add(u1);
+          continue;
+        }
 
-        continue;
-      }
+        // Incoming friend requests
+        if (!d.confirmed && u2 === userId) {
+          const otherUser = d.details?.[u1] ?? {
+            name: d.userName,
+            img_path: d.userImagePath,
+          };
 
-      // Incoming friend requests
-      if (!d.confirmed && u2 === userId) {
-        const otherUser = d.details?.[u1] ?? {
-          name: d.userName,
-          img_path: d.userImagePath,
-        };
-
-        _friendRequests.push({
-          id: doc.id,
-          other_user_id: u1,
-          other_user: {
-            name: otherUser.name,
-            img_path: otherUser.img_path ?? "",
-          },
-          time: d.date_requested?.toDate
-            ? computeTimePassed(d.date_requested.toDate())
-            : "Just now",
-          mutual_friends: 0,
-        });
-      }
-    }
-
-    // Calculate mutual friends efficiently
-    for (const req of _friendRequests) {
-      const requesterFriends = connections.get(req.other_user_id);
-      if (!requesterFriends) continue;
-
-      for (const mf of myFriends) {
-        if (requesterFriends.has(mf)) {
-          req.mutual_friends++;
+          _friendRequests.push({
+            id: doc.id,
+            other_user_id: u1,
+            other_user: {
+              name: otherUser.name,
+              img_path: otherUser.img_path ?? "",
+            },
+            time: d.date_requested?.toDate
+              ? computeTimePassed(d.date_requested.toDate())
+              : "Just now",
+            mutual_friends: 0,
+          });
         }
       }
+
+      // Calculate mutual friends efficiently
+      for (const req of _friendRequests) {
+        const requesterFriends = connections.get(req.other_user_id);
+        if (!requesterFriends) continue;
+
+        for (const mf of myFriends) {
+          if (requesterFriends.has(mf)) {
+            req.mutual_friends++;
+          }
+        }
+      }
+
+      setFriendRequests(_friendRequests);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", String(e));
+    } finally {
+      setRefreshing(false);
     }
+  };
 
-    setFriendRequests(_friendRequests);
-  } catch (e) {
-    console.error(e);
-    Alert.alert("Error", String(e));
-  } finally {
-    setRefreshing(false);
+  const updateNotifStatus = (otherUserId:string, accepted:boolean) => {
+    collectionName("notifications")
+      .whereEquals("receiver_id", userId)
+      .whereEquals("sender_id", otherUserId)
+      .whereEquals("type", "Sent Friend Request")
+      .get()
+      .then(res => {
+        let v: ((batch: WriteBatch) => void)[] = [];
+        res.docs.forEach(dc => {
+          if (dc.data()?.friend_request_accepted === undefined)
+            v.push((batch) => batch.update(dc.ref, {
+              friend_request_accepted: accepted
+            }))
+        });
+        if (v.length == 0) return
+
+        saveBatch(v)
+      })
   }
-};
 
-
-  const handleConfirm = (id: string) => {
+  const handleConfirm = (_friendRequestsData: any) => {
     // setStatus((prev) => ({ ...prev, [id]: "confirmed" }));
-    set("friends", id).value({
+    set("friends", _friendRequestsData.id).value({
       confirmed: true,
     });
-    setFriendRequests((prev: any) => prev.filter((f: any) => f.id !== id));
+    addNotif({
+      receiver_id: _friendRequestsData.other_user_id,
+      href: "/usable/user-profile",
+      type: "Confirm Friend Request",
+      params: {userToViewId: userId},
+    });
+    setFriendRequests((prev: any) => prev.filter((f: any) => f.id !== _friendRequestsData.id));
+    updateNotifStatus(_friendRequestsData.other_user_id, true)
   };
 
   const handleDelete = (_friendRequestsData: any) => {
     // setStatus((prev) => ({ ...prev, [id]: "deleted" }));
     remove("friends", _friendRequestsData.id);
-    addNotif({
-      receiver_id: _friendRequestsData.other_user_id,
-      href: "/pet-owner/add-friend",
-      type: "Decline Friend Request",
-      params: {},
-    });
     setFriendRequests((prev: any) =>
       prev.filter((f: any) => f.id !== _friendRequestsData.id),
     );
+    updateNotifStatus(_friendRequestsData.other_user_id, false)
   };
+
+  const seeProfile = (_user: any) => {
+    router.push({
+      pathname: '/usable/user-profile',
+      params: {
+        userToViewId: _user.other_user_id
+      }
+    })
+  }
 
   const renderRequest = ({ item }: any) => (
     <View style={styles.requestCard}>
-      <Image
-        source={{ uri: item.other_user.img_path }}
-        style={styles.profilePic}
-      />
+      <TouchableOpacity onPress={() => seeProfile(item)}>
+        <Image
+          source={{ uri: item.other_user.img_path }}
+          style={styles.profilePic}
+        />
+      </TouchableOpacity>
 
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.other_user.name}</Text>
@@ -251,7 +284,7 @@ const addFriend = () => {
         <View style={styles.actionsColumn}>
           <Pressable
             style={[styles.button, styles.confirm]}
-            onPress={() => handleConfirm(item.id)}
+            onPress={() => handleConfirm(item)}
           >
             <Text style={styles.btnText}>Confirm</Text>
           </Pressable>
@@ -259,7 +292,7 @@ const addFriend = () => {
             style={[styles.button, styles.delete]}
             onPress={() => handleDelete(item)}
           >
-            <Text style={[styles.btnText, { color: "#000" }]}>Delete</Text>
+            <Text style={[styles.btnText, { color: "#000" }]}>Decline</Text>
           </Pressable>
           {/* {status[item.id] === "confirmed" ? (
             <Text style={styles.confirmedText}>You are now friends</Text>

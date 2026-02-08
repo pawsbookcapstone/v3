@@ -1,6 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { find, get, remove, set, update, where } from "@/helpers/db";
-import { NotifType } from "@/helpers/notifHook";
+import { NotifType, useNotifHook } from "@/helpers/notifHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -63,6 +63,7 @@ type NotificationItem = {
   name: string;
   profile: string;
   href: Href;
+  sender_id: string;
   accepted:boolean;
   description: string;
   type: NotifType;
@@ -75,7 +76,7 @@ const descriptions: any = {
   Like: "Liked your post",
   Comment: "Commented on your post",
   "Sent Friend Request": "Sent you a friend request",
-  "Decline Friend Request": "Decline your friend request",
+  "Confirm Friend Request": "Accepted your friend request",
   "Sent a Message": "Sent you a message",
   "Sent a Image": "Sent you an image",
   "Share": "Shared your post",
@@ -91,6 +92,8 @@ const Notifications = () => {
     x: number;
     y: number;
   } | null>(null);
+
+  const addNotif = useNotifHook()
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -122,6 +125,7 @@ const Notifications = () => {
           name: data.sender_name || "Unknown",
           profile: data.sender_img_path || "",
           description: desc,
+          sender_id: data.sender_id,
           seen: data.seen,
           href: data.href,
           accepted: data.friend_request_accepted,
@@ -180,8 +184,15 @@ const Notifications = () => {
     }
     setFriendReqData(item.id, accepted)
     
-    if (accepted)
+    if (accepted){
       set('friends', item.params?.id).value({confirmed: true})
+      addNotif({
+        receiver_id: item.sender_id,
+        href: "/usable/user-profile",
+        type: "Confirm Friend Request",
+        params: {userToViewId: userId},
+      });
+    }
     else
       remove("friends", item.params?.id);
   };
@@ -196,6 +207,7 @@ const Notifications = () => {
         n.id === id
           ? {
               ...n,
+              seen: true,
               accepted: accepted,
               description: accepted
                 ? "You accepted the request"
@@ -246,14 +258,21 @@ const Notifications = () => {
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
         <TouchableOpacity onPress={() => navigate(item)}>
     <View style={[styles.notificationItem, (!item.seen && {backgroundColor: Colors.veryLightGray} )]}>
-      <Image source={{ uri: item.profile }} style={styles.avatar} />
+      <TouchableOpacity onPress={() => router.push({
+        pathname: '/usable/user-profile',
+        params: {
+          userToViewId: item.sender_id,
+        }
+      })}>
+        <Image source={{ uri: item.profile }} style={styles.avatar} />
+      </TouchableOpacity>
 
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={[styles.description, (!item.seen && {fontWeight: "800"} )]}>{item.description}</Text>
 
         {/* Friend request buttons */}
-        {item.type === "Sent Friend Request" && !item.accepted && (
+        {item.type === "Sent Friend Request" && item.accepted == undefined && (
           <View style={styles.friendButtons}>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: Colors.primary }]}

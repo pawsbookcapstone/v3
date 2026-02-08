@@ -35,12 +35,6 @@ import {
 const Profile = () => {
   const { userId, userName, userImagePath, isPage } = useAppContext();
   const { userToViewId } = useLocalSearchParams<{
-    id: string;
-    name: string;
-    profileImage: string;
-    isFriend: string;
-    cover_photo: string;
-    bio?: string;
     userToViewId: string;
   }>();
 
@@ -532,7 +526,7 @@ const Profile = () => {
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
       <HeaderLayout noBorderRadius>
         <HeaderWithActions
-          title={`${profile.firstname} ${profile.lastname}`}
+          title={`${profile.firstname ?? ''} ${profile.lastname ?? ''}`}
           onBack={() => router.back()}
           onAction={() => router.push("/pet-owner/search")}
           actionIcon="search"
