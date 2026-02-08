@@ -9,12 +9,14 @@ import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
-import { Entypo, FontAwesome6 } from "@expo/vector-icons";
+import { Entypo, FontAwesome6, MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { serverTimestamp } from "firebase/firestore";
-import React, { useState } from "react";
+import { Loader2 } from "lucide-react-native";
+import React, { useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   Modal,
   ScrollView,
@@ -25,6 +27,13 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+
+type ImageType = {
+  uri: string;
+  scanning?: boolean;
+  errors?: any;
+  status?: SafetyStatus | undefined;
+}
 
 const PostScreen = () => {
   const [editPost, setEditPost] = useState<any>(null);
@@ -37,7 +46,7 @@ const PostScreen = () => {
   // const { taggedPets: taggedPetsParam } = useLocalSearchParams();
 
   const [content, setContent] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<ImageType[]>([]);
   const [showExitModal, setShowExitModal] = useState(false);
   const [taggedPets, setTaggedPets] = useState<
     { id: string; name: string; img_path: string }[]
@@ -58,6 +67,10 @@ const PostScreen = () => {
     }
   }, []);
 
+  const isScanning = useMemo(() => {
+    return images.some(f => f.scanning)
+  }, [images])
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -72,12 +85,23 @@ const PostScreen = () => {
     const asset = result.assets[0]
     
     const dataUrl = `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`;
-    const res = await moderateImage(dataUrl)
+    const idx = images.length
+    moderateImage(dataUrl)
+      .then(res => {
+        console.log('Image AI Result: ', res);
+        
+        setImages(_images => {
+          const img = _images[idx]
+          img.scanning = false
+          img.status = res.status
+          if (res.violations && res.violations.length > 0)
+            img.errors = res.violations
+          console.log(img);
+          return [..._images]
+        })
+      })
 
-    console.log('Image AI Result: ', res);
-    if (res.status === SafetyStatus.BLOCKED) return
-
-    setImages((prev) => [...prev, result.assets[0].uri]);
+    setImages((prev) => [...prev, {uri:asset.uri, scanning: true}]);
   };
 
   const takePhoto = async () => {
@@ -85,16 +109,47 @@ const PostScreen = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
+      base64: true
     });
 
-    if (!result.canceled) {
-      setImages((prev) => [...prev, result.assets[0].uri]);
-    }
+    if (result.canceled || result.assets.length == 0) return
+
+    const asset = result.assets[0]
+    
+    const dataUrl = `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`;
+    const idx = images.length
+    moderateImage(dataUrl)
+      .then(res => {
+        console.log('Image AI Result: ', res);
+        
+        setImages(_images => {
+          const img = _images[idx]
+          img.scanning = false
+          img.status = res.status
+          if (res.violations && res.violations.length > 0)
+            img.errors = res.violations
+          console.log(img);
+          return [..._images]
+        })
+      })
+
+    setImages((prev) => [...prev, {uri:asset.uri, scanning: true}]);
   };
 
   const handlePost = async () => {
-    if (!content.trim() && images.length === 0)
+    const safeImages = images.filter(s => s.status !== SafetyStatus.BLOCKED)
+    if (!content.trim() && safeImages.length === 0)
       throw "Please add some text or an image."
+
+      const res = await moderateText(content.trim())
+      console.log('Text AI Result: ', res);
+      if (res.status === SafetyStatus.BLOCKED){
+        Alert.alert("Error", "Your message is not allowed!!!, Please revise before posting again.")
+        return
+      }
+      if (res.status === SafetyStatus.WARNING){
+        Alert.alert("Warning", "Your message contains unwanted words!")
+      }
 
       let data: any = {
         creator_id: userId,
@@ -114,18 +169,15 @@ const PostScreen = () => {
         }));
       }
 
-      if (images.length > 0) {
+      if (safeImages.length > 0) {
         const temp: string[] = [];
-        for (const i in images) {
-          const img_url = await uploadImageUri(images[i]);
+        for (const img of safeImages) {
+          const img_url = await uploadImageUri(img.uri);
           
           temp.push(img_url);
         }
         data.img_paths = temp;
       }
-
-      const res = await moderateText(content.trim())
-      console.log('Text AI Result: ', res);
 
       if (editPost?.id) {
         // Edit existing post
@@ -216,15 +268,46 @@ const PostScreen = () => {
             showsHorizontalScrollIndicator={false}
             style={{ marginTop: 10 }}
           >
-            {images.map((uri, idx) => (
+            {images.map((image, idx) => (
               <View key={idx} style={{ position: "relative", marginRight: 10 }}>
-                <Image source={{ uri }} style={styles.previewImage} />
-                <TouchableOpacity
-                  style={styles.removeImageBtn}
-                  onPress={() => setImages(images.filter((_, i) => i !== idx))}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "bold" }}>X</Text>
-                </TouchableOpacity>
+                <Image source={{ uri: image.uri ?? "" }} style={styles.previewImage} />
+                {image.scanning && <View style={{
+                    position:'absolute', 
+                    inset: 0, 
+                    backgroundColor: Colors.black, 
+                    opacity: 0.4, 
+                    display: 'flex', 
+                    borderRadius: 10,
+                    justifyContent:'center', 
+                    alignItems:"center", 
+                    marginRight: 10
+                }}>
+                  <Loader2 color={Colors.white} />
+                </View>}
+                {image.scanning == false && <View style={{
+                    position:'absolute', 
+                    inset: 0, 
+                    display: 'flex', 
+                    borderRadius: 10,
+                    justifyContent:'center', 
+                    alignItems:"center", 
+                    marginRight: 10
+                }}>
+                  {image.status == SafetyStatus.SAFE && (!image.errors || image.errors.length == 0) && <MaterialIcons name="thumb-up" color={Colors.secondary} size={23} />}
+                  {image.status == SafetyStatus.BLOCKED && <MaterialIcons name="warning" color={Colors.red} size={23} />}
+                  {image.status == SafetyStatus.WARNING || (image.status == SafetyStatus.SAFE && image.errors && image.errors.length > 0) && <MaterialIcons name="warning" color={Colors.primary} size={23} />}
+                </View>}
+                {
+                  image.scanning == false && 
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => {
+                      setImages(images.filter((_, i) => i !== idx))
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "bold" }}>X</Text>
+                  </TouchableOpacity>
+                }
               </View>
             ))}
           </ScrollView>
@@ -253,10 +336,11 @@ const PostScreen = () => {
 
         {/* Post Button */}
         {renderLoadingButton({
-          style: styles.postButton,
+          style: [styles.postButton, (isScanning && {backgroundColor: Colors.disabled})],
           children: <Text style={styles.postText}>
             {editPost ? "Update Post" : "Post"}
           </Text>,
+          disabled: isScanning,
           onPress: handlePost
         })}
         {/* <TouchableOpacity style={styles.postButton} onPress={handlePost}>
