@@ -5,10 +5,12 @@ import {
   Animated,
   Platform,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
+  TextStyle,
   ToastAndroid,
-  View,
+  View
 } from "react-native";
 
 const test = async () => {
@@ -59,13 +61,17 @@ export function useLoadingHook(showError?: boolean) {
       hideLoadingText,
       loadingText,
       loadingTextStyle,
+      spinnerSize,
+      spinnerColor,
     }: {
       style?: any;
       onPress?: () => void | Promise<any>;
       children: React.ReactNode;
       hideLoadingText?: boolean;
       loadingText?: string;
-      loadingTextStyle?: any;
+      loadingTextStyle?: StyleProp<TextStyle>;
+      spinnerSize?: number;
+      spinnerColor?: string;
       disabled?: boolean;
     }) => {
       const process = async () => {
@@ -103,7 +109,7 @@ export function useLoadingHook(showError?: boolean) {
           {loading ? (
             <View style={styles.content}>
               <Animated.View style={{ transform: [{ rotate }] }}>
-                <Loader2 size={18} color="#fff" />
+                <Loader2 size={spinnerSize ?? 18} color={spinnerColor ?? "#fff"} />
               </Animated.View>
               {!hideLoadingText && <Text style={[styles.buttonText, loadingTextStyle]}>{loadingText ?? 'Please wait...'}</Text>}
             </View>

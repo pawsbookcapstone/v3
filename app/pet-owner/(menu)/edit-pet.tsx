@@ -2,6 +2,7 @@ import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { setUnMerged } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -10,7 +11,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -74,7 +75,7 @@ const EditPet = () => {
 
   const renderLoadingButton = useLoadingHook(true)
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     if (!_vaccines) {
       return;
     }

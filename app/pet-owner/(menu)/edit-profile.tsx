@@ -3,6 +3,8 @@ import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { find, set } from "@/helpers/db";
 import { updateUserProfile } from "@/helpers/updateProfile";
+import { useLoadingHook } from "@/hooks/loadingHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -10,9 +12,8 @@ import { screens } from "@/shared/styles/styles";
 import { FontAwesome } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -25,7 +26,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 
 const EditProfile = () => {
@@ -48,7 +49,9 @@ const EditProfile = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [imageType, setImageType] = useState<"profile" | "cover" | null>(null);
 
-  useEffect(() => {
+  const renderLoadingButton = useLoadingHook(true)
+
+  useOnFocusHook(() => {
     const fetchProfile = async () => {
       const snap = await find("users", userId);
       const data: any = snap.data();
@@ -113,8 +116,9 @@ const EditProfile = () => {
   };
 
   const handleSave = async () => {
-    try {
       let data = { ...profile };
+      if (!data.firstname || !data.email || (!data.is_page && !data.lastname)) throw "Please fill all fields!!!"
+
       if (data.profile_photo) {
         const profilePath = await uploadImageUri(data.profile_photo);
         delete data.profile_photo;
@@ -135,9 +139,6 @@ const EditProfile = () => {
         data.img_path,
       );
       router.back();
-    } catch (e) {
-      Alert.alert("Error", e + "");
-    }
   };
 
   return (
@@ -317,9 +318,14 @@ const EditProfile = () => {
             </View>
 
             {/* Save Button */}
-            <Pressable style={styles.saveButton} onPress={handleSave}>
+            {renderLoadingButton({
+              style: styles.saveButton,
+              children: <Text style={styles.saveButtonText}>Save Changes</Text>,
+              onPress: handleSave
+            })}
+            {/* <Pressable style={styles.saveButton} onPress={handleSave}>
               <Text style={styles.saveButtonText}>Save Changes</Text>
-            </Pressable>
+            </Pressable> */}
           </ScrollView>
 
           {/* ✅ Modal for choosing image source */}

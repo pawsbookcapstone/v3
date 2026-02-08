@@ -1,13 +1,15 @@
+import { useAppContext } from "@/AppsProvider";
 import { get } from "@/helpers/db";
 import { useNotificationHook } from "@/hooks/notificationHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import SkeletonMarketCard from "@/shared/components/MarketSkeleton";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Feather, Octicons } from "@expo/vector-icons";
-import { Link, router, useFocusEffect } from "expo-router";
+import { Link, router } from "expo-router";
 import { where } from "firebase/firestore";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   FlatList,
   Image,
@@ -20,6 +22,8 @@ import {
 } from "react-native";
 
 const marketPlace = () => {
+  const {userId} = useAppContext()
+  
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,21 +44,12 @@ const marketPlace = () => {
     setRefreshing(false);
   };
 
-  useEffect(() => {
-    setTimeout(() => {
-      onRefresh();
-      setLoading(false);
-    }, 2000);
-  }, []);
+  useOnFocusHook(() => {
+    onRefresh()
+  }, [userId]);
 
   // Categories
   const categories = ["Dogs", "Cats", "Food", "Accessories"];
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchMarketItems();
-    }, []),
-  );
 
   const [marketItems, setMarketItems] = useState<any[]>([]);
   const fetchMarketItems = async () => {

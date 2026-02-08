@@ -16,6 +16,7 @@ import {
 import { useNotifHook } from "@/helpers/notifHook";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useNotificationHook } from "@/hooks/notificationHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import SkeletonPost from "@/shared/components/SkeletalLoader";
@@ -27,8 +28,8 @@ import {
   FontAwesome5,
   Ionicons,
 } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -46,12 +47,6 @@ import {
   View,
 } from "react-native";
 
-const myProfileImage = {
-  profile: "https://randomuser.me/api/portraits/men/32.jpg",
-  name: "John Doe",
-};
-//
-
 const Home = () => {
   const { userId, userName, userImagePath, isPage } = useAppContext();
 
@@ -59,7 +54,6 @@ const Home = () => {
   const [dropdownPos, setDropdownPos] = useState({ x: 0, y: 0 });
   // const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
-  const { newPost } = useLocalSearchParams();
   const [post, setPost] = useState("");
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(true);
@@ -72,10 +66,6 @@ const Home = () => {
   const [reportModalVisible, setReportModalVisible] = React.useState(false);
   const [selectedPostId, setSelectedPostId] = React.useState<string | null>(
     null,
-  );
-
-  const [commentInputs, setCommentInputs] = useState<{ [key: string]: string }>(
-    {},
   );
 
   const addNotif = useNotifHook();
@@ -243,14 +233,16 @@ const Home = () => {
     }
   };
 
-
-  useEffect(() => {
-    onRefresh();
-    // setTimeout(() => {
-    //   // setPosts((prev) => (prev.length === 0 ? initialPosts : prev));
-    //   setLoading(false);
-    // }, 2000);
-  }, [userId]);
+  useOnFocusHook(() => {
+    onRefresh()
+  }, [userId])
+  // useEffect(() => {
+  //   onRefresh();
+  //   // setTimeout(() => {
+  //   //   // setPosts((prev) => (prev.length === 0 ? initialPosts : prev));
+  //   //   setLoading(false);
+  //   // }, 2000);
+  // }, [userId]);
 
   // useEffect(() => {
   //   // console.log(userId, userName, userImagePath);
@@ -782,17 +774,7 @@ const Home = () => {
         />
         <View style={styles.iconWrapper}>
           <Pressable
-            onPress={() => {
-              const routePath = "/pet-owner/post";
-
-              router.push({
-                pathname: routePath,
-                params: {
-                  profile: myProfileImage.profile,
-                  name: myProfileImage.name,
-                },
-              });
-            }}
+            onPress={() => router.push("/pet-owner/post")}
           >
             <FontAwesome name="plus-square-o" size={24} color="black" />
           </Pressable>
@@ -822,17 +804,7 @@ const Home = () => {
       <View style={styles.postInputContainer}>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
           <Pressable
-            onPress={() => {
-              const routePath = "/pet-owner/profile";
-
-              router.push({
-                pathname: routePath,
-                params: {
-                  profile: myProfileImage.profile,
-                  name: myProfileImage.name,
-                },
-              });
-            }}
+            onPress={() => router.push("/pet-owner/post")}
           >
             <Image
               source={{ uri: userImagePath }}
@@ -843,17 +815,7 @@ const Home = () => {
             placeholder="What's on your mind?"
             value={post}
             onChangeText={setPost}
-            onPress={() => {
-              const routePath = "/pet-owner/(home)/post";
-
-              router.push({
-                pathname: routePath,
-                params: {
-                  profile: myProfileImage.profile,
-                  name: myProfileImage.name,
-                },
-              });
-            }}
+            onPress={() => router.push("/pet-owner/post")}
             style={styles.input}
           />
         </View>

@@ -3,6 +3,8 @@ import { uploadImageUri } from "@/helpers/cloudinary";
 import { add, collectionName, set } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { useNotifHook } from "@/helpers/notifHook";
+import { useLoadingHook } from "@/hooks/loadingHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
@@ -16,7 +18,7 @@ import {
   query,
   serverTimestamp,
 } from "firebase/firestore";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -34,9 +36,6 @@ const GroupChat = () => {
 
   const { chatDetailsStr }: { chatDetailsStr: string } = useLocalSearchParams();
   const [chatDetails] = useState(JSON.parse(chatDetailsStr));
-  const { group_name } = useLocalSearchParams();
-
-  // const [users, setUsers] = useState<any>({})
 
   const [messages, setMessages] = useState<any>([]);
 
@@ -45,8 +44,9 @@ const GroupChat = () => {
 
   const addNotif = useNotifHook();
 
-  useEffect(() => {
-    // console.log("Chat Details:", group_name);
+  const renderLoadingButton = useLoadingHook(true)
+
+  useOnFocusHook(() => {
     if (!userId) return;
 
     let unsubscribe: any = null;
@@ -81,6 +81,7 @@ const GroupChat = () => {
                 id: f.id,
                 message: a.message,
                 img_path: a.img_path,
+                sender_id: a.sender_id,
                 yourMessage: yourMessage,
                 ..._user,
               };
@@ -91,7 +92,7 @@ const GroupChat = () => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [userId]);
+  }, []);
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -123,10 +124,7 @@ const GroupChat = () => {
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      alert("Permission to access camera is required!");
-      return;
-    }
+    if (!permission.granted) throw "Permission to access camera is required!"
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -172,7 +170,12 @@ const GroupChat = () => {
       ]}
     >
       {!item.yourMessage && item.avatar && (
-        <Image source={{ uri: item.avatar }} style={styles.senderAvatar} />
+        <TouchableOpacity onPress={() => router.push({
+          pathname: '/usable/user-profile',
+          params: {userToViewId: item.sender_id}
+        })}>
+          <Image source={{ uri: item.avatar }} style={styles.senderAvatar} />
+        </TouchableOpacity>
       )}
 
       <View>
@@ -220,7 +223,7 @@ const GroupChat = () => {
               style={styles.groupAvatar}
             />
             <Text style={styles.groupName}>{name}</Text> */}
-            <Text style={styles.groupName}>{group_name}</Text>
+            <Text style={styles.groupName}>{chatDetails.name}</Text>
           </View>
         </View>
       </HeaderLayout>
@@ -253,13 +256,25 @@ const GroupChat = () => {
 
           {/* Input */}
           <View style={styles.inputRow}>
-            <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
+            {renderLoadingButton({
+              style: styles.iconButton,
+              children: <MaterialIcons
+                name="photo-camera"
+                size={24}
+                color={Colors.primary}
+              />,
+              hideLoadingText: true,
+              spinnerColor: Colors.primary,
+              spinnerSize: 24,
+              onPress: pickImage
+            })}
+            {/* <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
               <MaterialIcons
                 name="photo-camera"
                 size={24}
                 color={Colors.primary}
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TextInput
               style={styles.input}

@@ -9,6 +9,7 @@ import { Pressable, RefreshControl } from "react-native";
 
 import { useAppContext } from "@/AppsProvider";
 import { all } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { TGroup } from "@/shared/Types/GroupType";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -92,10 +93,8 @@ const Community = () => {
     // },
   ]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
+  useOnFocusHook(() => {
     fetchGroups();
-    return () => clearTimeout(timer);
   }, []);
 
   const fetchGroups = async () => {

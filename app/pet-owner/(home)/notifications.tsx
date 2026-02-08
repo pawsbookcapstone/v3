@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { find, get, remove, set, where } from "@/helpers/db";
 import { NotifType } from "@/helpers/notifHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -8,7 +9,7 @@ import NotificationSkeleton from "@/shared/components/NotificationSkeleton";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Entypo } from "@expo/vector-icons";
 import { Href, router } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   findNodeHandle,
@@ -136,7 +137,7 @@ const Notifications = () => {
     }
   };
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     fetchNotifications();
   }, []);
 

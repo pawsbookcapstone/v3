@@ -3,6 +3,7 @@ import CreateProfileModal from "@/components/modals/CreateProfileModal";
 import LogoutModal from "@/components/modals/LogoutModal";
 import { all } from "@/helpers/db";
 import { auth } from "@/helpers/firebase";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
@@ -13,7 +14,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { Link, router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   Pressable,
@@ -55,7 +56,7 @@ const profile = () => {
   //   },
   // ];
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     if (isPage || !userId)return 
 
     const fetchPets = async () => {

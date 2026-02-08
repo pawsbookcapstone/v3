@@ -1,12 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, get, serverTimestamp, where } from "@/helpers/db";
+import { add, collectionName, serverTimestamp } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather, FontAwesome6 } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   FlatList,
@@ -27,17 +28,25 @@ const CreateGc = () => {
 
   const [users, setUsers] = useState<any>([]);
 
-  useEffect(() => {
-    get('users').where(where('id', '!=', userId))
+  useOnFocusHook(() => {
+    collectionName('users')
+    .whereNotEquals('id', userId)
+    .get()
     .then(({docs}) => {
-      setUsers(docs.map(user => {
-        const d = user.data()
-        return {
+      const _users = []
+      for (const dc of docs) {
+        const d = dc.data()
+        if (d.is_page) continue
+
+        _users.push({
           id:d.id,
           name: `${d.firstname} ${d.lastname}`,
-          img_path: d.img_path
-        }
-      }))
+          img_path: d.img_path,
+          is_page: d.is_page ?? false
+        })
+      }
+      
+      setUsers(_users)
     })
   }, [])
 

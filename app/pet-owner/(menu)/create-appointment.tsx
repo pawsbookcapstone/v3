@@ -1,11 +1,12 @@
 import { collectionName } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   FlatList,
   Image,
@@ -20,7 +21,7 @@ const CreateAppointment = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [pages, setPages] = useState<any>([])
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     collectionName("users")
       .whereEquals("is_page", true)
       .whereNotEquals("allow_appointments", false)

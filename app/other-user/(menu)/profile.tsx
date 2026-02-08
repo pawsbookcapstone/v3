@@ -1,6 +1,7 @@
 import { useAppContext } from "@/AppsProvider";
 import { add, collectionGroupName, collectionName, find, remove, serverTimestamp, set } from "@/helpers/db";
 import { computeTimePassed } from "@/helpers/timeConverter";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -8,7 +9,7 @@ import ProfileSkeleton from "@/shared/components/ProfileSkeleton";
 import { screens } from "@/shared/styles/styles";
 import { Entypo, Ionicons, MaterialIcons, Octicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   Image,
@@ -114,7 +115,7 @@ const PageProfile = () => {
   //   fetch()
   // }, []);
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     const fetch = async () => {
       setLoading(true);
 

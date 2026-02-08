@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { all } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -70,7 +71,7 @@ const LostFound = () => {
   //bagong code
   const [lostAndFoundItems, setLostAndFoundItems] = useState<any[]>([]);
   const { userId, userName, userImagePath } = useAppContext();
-  React.useEffect(() => {
+  useOnFocusHook(() => {
     const fetchLostAndFound = async () => {
       try {
         // setIsLoading(true);

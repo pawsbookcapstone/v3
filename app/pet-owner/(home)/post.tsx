@@ -2,6 +2,7 @@ import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add, set } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -10,7 +11,7 @@ import { Entypo, FontAwesome6 } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { serverTimestamp } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   Modal,
@@ -41,17 +42,17 @@ const PostScreen = () => {
   >([]);
   const params = useLocalSearchParams();
 
-  useEffect(() => {
-    if (params.editPost) {
-      try {
-        const post = JSON.parse(params.editPost as string);
-        setEditPost(post);
-        setContent(post.body || "");
-        setImages(post.img_paths || []);
-        setTaggedPets(post.pets || []);
-      } catch (e) {
-        console.warn("Invalid editPost param", e);
-      }
+  useOnFocusHook(() => {
+    if (!params.editPost) return
+
+    try {
+      const post = JSON.parse(params.editPost as string);
+      setEditPost(post);
+      setContent(post.body || "");
+      setImages(post.img_paths || []);
+      setTaggedPets(post.pets || []);
+    } catch (e) {
+      console.warn("Invalid editPost param", e);
     }
   }, []);
 

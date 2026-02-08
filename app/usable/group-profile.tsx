@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { all, remove, serverTimestamp, set, update } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -11,7 +12,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   Image,
@@ -96,7 +97,7 @@ export default function GroupProfile() {
     // },
   ]);
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     const fetchPosts = async () => {
       try {
         const postsData = await all("groups", groupId, "posts");

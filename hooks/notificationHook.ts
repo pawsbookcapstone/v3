@@ -1,13 +1,14 @@
 import { useAppContext } from "@/AppsProvider";
 import { db } from "@/helpers/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOnFocusHook } from "./onFocusHook";
 
 export function useNotificationHook(){
     const {userId} = useAppContext()
     const [hasNotif, setHasNotif] = useState(false)
 
-    useEffect(() => {
+    useOnFocusHook(() => {
         if (!userId) return
         
         const q = query(
@@ -22,9 +23,7 @@ export function useNotificationHook(){
             setHasNotif(count > 0);
         });
 
-        return () => {
-            unsubscribe()
-        }
+        return () => unsubscribe()
     }, [userId])
 
     return hasNotif

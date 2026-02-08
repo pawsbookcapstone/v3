@@ -1,12 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
 import { collectionName } from "@/helpers/db";
 import { auth } from "@/helpers/firebase";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import Loader from "@/shared/components/Loader";
 import { MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   Modal,
@@ -58,7 +59,7 @@ const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 
   // const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
 
-  useEffect(() => {
+  useOnFocusHook(() => {
     const getProfiles = async () => {
       try {
         const _profiles = await AsyncStorage.getItem('profiles')
@@ -90,7 +91,7 @@ const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
     }
 
     getProfiles()
-  }, [])
+  }, [userId])
 
   const handleSelectProfile = async (profile: Profile) => {
     // setActiveProfile(profile);
