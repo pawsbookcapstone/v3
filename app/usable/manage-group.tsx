@@ -3,7 +3,7 @@ import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { router, useLocalSearchParams } from "expo-router";
-import { documentId, where } from "firebase/firestore";
+import { documentId, serverTimestamp, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   FlatList,
@@ -114,6 +114,12 @@ export default function CreatePageScreen() {
     remove("groups", groupidStr, "join-request", user.id);
     update("groups", groupidStr).value({
       members: Number(membersNumber) + 1,
+    });
+
+    add("users", user.id, "joined-groups").value({
+      groupId: groupidStr,
+      groupName: pageName,
+      joinedAt: serverTimestamp(),
     });
 
     fetchGroupMembers();
