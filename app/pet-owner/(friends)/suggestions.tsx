@@ -70,14 +70,14 @@ const Suggestions = () => {
           const data = d.data();
           const [u1, u2] = data.users;
 
+          if (u1 === userId || u2 === userId) return;
+
           const candidate =
             friendIds.has(u1) ? u2 :
             friendIds.has(u2) ? u1 :
             null;
 
           if (!candidate) return;
-          if (candidate === userId) return; 
-          if (friendIds.has(candidate)) return; 
           if (friendRequestedIds.has(candidate)) return;
 
           const curr = mutuals.get(candidate) ?? {

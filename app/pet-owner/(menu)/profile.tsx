@@ -567,7 +567,12 @@ const Profile = () => {
             {/* --- Friends Grid --- */}
             <View style={styles.friendGrid}>
               {friends.map((friend: any) => (
-                <View key={friend.id} style={styles.friendCard}>
+                <Pressable key={friend.id} style={styles.friendCard} onPress={() => router.push({
+                  pathname: '/usable/user-profile',
+                  params: {
+                    userToViewId: friend.user_id
+                  }
+                })}>
                   <Image
                     source={{ uri: friend.img_path }}
                     style={styles.friendImage}
@@ -575,7 +580,7 @@ const Profile = () => {
                   <Text style={styles.friendName} numberOfLines={2}>
                     {friend.name}
                   </Text>
-                </View>
+                </Pressable>
               ))}
             </View>
 
