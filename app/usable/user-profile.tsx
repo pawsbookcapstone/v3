@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, all, count, find, get, remove, set, where } from "@/helpers/db";
+import { add, all, count, find, get, remove, set, update, where } from "@/helpers/db";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
 import { computeTimePassed } from "@/helpers/timeConverter";
@@ -294,6 +294,8 @@ const Profile = () => {
       _posts.map((p: any) => {
         if (p.id !== id) return p;
 
+        const isLiking = !p.liked;
+        
         let liked_by_ids = [];
         if (!p.liked_by_ids) liked_by_ids = [userId];
         else {
@@ -302,11 +304,17 @@ const Profile = () => {
           } else liked_by_ids = [...p.liked_by_ids, userId];
         }
 
-        set("posts", id).value({ liked_by_ids: liked_by_ids });
+        update("posts", id).value({ liked_by_ids: liked_by_ids });
+        if (isLiking)
+          addNotif({
+            receiver_id: p.creator_id,
+            href: "/pet-owner/profile",
+            type: "Like",
+          });
         return {
           ...p,
           liked_by_ids: [...liked_by_ids],
-          liked: !p.liked,
+          liked: isLiking,
         };
       }),
     );
@@ -382,14 +390,20 @@ const Profile = () => {
     add("posts", postId, "comments").value(data);
 
     setPosts((prev: any) =>
-      prev.map((p: any) =>
-        p.id === postId
-          ? {
-              ...p,
-              comments: [...p.comments, data],
-            }
-          : p,
-      ),
+      prev.map((p: any) => {
+        if (p.id !== postId) return p;
+
+        addNotif({
+          receiver_id: p.creator_id,
+          href: "/pet-owner/(menu)/profile",
+          type: "Comment",
+        });
+
+        return {
+          ...p,
+          comments: [...p.comments, data],
+        };
+      }),
     );
     setComment("");
 

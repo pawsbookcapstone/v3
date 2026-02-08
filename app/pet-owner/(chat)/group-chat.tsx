@@ -1,6 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
-import { add, collectionName, set } from "@/helpers/db";
+import { add, collectionName, find, set, update } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { useNotifHook } from "@/helpers/notifHook";
 import { useLoadingHook } from "@/hooks/loadingHook";
@@ -90,6 +90,15 @@ const GroupChat = () => {
         });
       });
     return () => {
+      find("chats", chatDetails.id)
+        .then(d => {
+          const seen_by_ids = d.data()?.seen_by_ids ?? []
+          if (seen_by_ids.some((id:string) => id === userId)) return
+
+          update("chats", chatDetails.id).value({
+            seen_by_ids: [...seen_by_ids, userId]
+          })
+        })
       if (unsubscribe) unsubscribe();
     };
   }, []);
@@ -100,6 +109,7 @@ const GroupChat = () => {
     set("chats", chatDetails.id).value({
       last_message: input.trim(),
       last_sent_at: serverTimestamp(),
+      seen_by_ids: [userId]
     });
     add("chats", chatDetails.id, "messages").value({
       message: input.trim(),
@@ -112,7 +122,7 @@ const GroupChat = () => {
 
       addNotif({
         receiver_id: id,
-        href: "/pet-owner/chat-field",
+        href: "/pet-owner/group-chat",
         type: "Sent a Message",
         params: {
           groupChatId: chatDetails.id,
@@ -150,7 +160,7 @@ const GroupChat = () => {
 
       addNotif({
         receiver_id: id,
-        href: "/pet-owner/chat-field",
+        href: "/pet-owner/group-chat",
         type: "Sent a Image",
         params: {
           groupChatId: chatDetails.id,

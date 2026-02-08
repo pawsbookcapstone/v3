@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { find, get, remove, set, where } from "@/helpers/db";
+import { find, get, remove, set, update, where } from "@/helpers/db";
 import { NotifType } from "@/helpers/notifHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -67,6 +67,7 @@ type NotificationItem = {
   description: string;
   type: NotifType;
   time: string; // ISO string
+  seen: boolean;
   params?: any; // ISO string
 };
 
@@ -121,6 +122,7 @@ const Notifications = () => {
           name: data.sender_name || "Unknown",
           profile: data.sender_img_path || "",
           description: desc,
+          seen: data.seen,
           href: data.href,
           accepted: data.friend_request_accepted,
           type: data.type || "info",
@@ -215,7 +217,7 @@ const Notifications = () => {
   };
 
   const navigate = (item:any) => {
-    set('notifications', item.id).value({
+    update('notifications', item.id).value({
       seen: true
     })
 
@@ -233,6 +235,8 @@ const Notifications = () => {
       })
       return
     }
+    console.log(item.params);
+    
     router.push({
       pathname: item.href,
       params: item.params
@@ -241,12 +245,12 @@ const Notifications = () => {
 
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
         <TouchableOpacity onPress={() => navigate(item)}>
-    <View style={styles.notificationItem}>
+    <View style={[styles.notificationItem, (!item.seen && {backgroundColor: Colors.veryLightGray} )]}>
       <Image source={{ uri: item.profile }} style={styles.avatar} />
 
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.description}>{item.description}</Text>
+        <Text style={[styles.description, (!item.seen && {fontWeight: "800"} )]}>{item.description}</Text>
 
         {/* Friend request buttons */}
         {item.type === "Sent Friend Request" && !item.accepted && (
@@ -267,12 +271,15 @@ const Notifications = () => {
         )}
       </View>
 
-      <Text style={styles.time}>
-        {new Date(item.time).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </Text>
+      <View style={{alignItems:'flex-end'}}>
+        <Text style={styles.time}>
+          {new Date(item.time).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
+        {!item.seen && <View style={{backgroundColor: Colors.red, width: 8, height: 8, borderRadius: "50%", marginTop: 5, marginRight: 8}}/>}
+      </View>
 
       {item.type !== "Sent Friend Request" && (
         <TouchableOpacity onPress={(e) => openDropdown(e.nativeEvent, item.id)}>
@@ -393,7 +400,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "800",
     color: "#333",
   },
   description: {

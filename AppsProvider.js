@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
 import { db } from "./helpers/firebase";
@@ -30,13 +30,13 @@ export const AppsProvider = ({ children }) => {
     if (!userId) return;
 
     const subscription = AppState.addEventListener("change", async (state) => {
-      setDoc(doc(db, "users", userId), {
+      updateDoc(doc(db, "users", userId), {
         last_online_at: serverTimestamp(), active_status: state == 'active' ? 'active' : 'inactive'
       }, { merge: true })
     });
 
     return () => {
-      setDoc(doc(db, "users", userId), {
+      updateDoc(doc(db, "users", userId), {
         last_online_at: serverTimestamp(), active_status: 'inactive'
       }, { merge: true })
       subscription.remove();

@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, collectionGroupName, collectionName, find, remove, serverTimestamp, set } from "@/helpers/db";
+import { add, collectionGroupName, collectionName, find, remove, serverTimestamp, set, update } from "@/helpers/db";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -224,7 +224,7 @@ const PageProfile = () => {
           } else liked_by_ids = [...p.liked_by_ids, userId];
         }
 
-        set("posts", id).value({ liked_by_ids: liked_by_ids });
+        update("posts", id).value({ liked_by_ids: liked_by_ids });
         return {
           ...p,
           liked_by_ids: [...liked_by_ids],

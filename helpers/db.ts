@@ -16,6 +16,8 @@ import {
   updateDoc,
   where,
   WhereFilterOp,
+  writeBatch,
+  WriteBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -53,6 +55,9 @@ const whereMainProcess = (group:boolean, whereCond: QueryConstraint[], path: str
       whereCond.push(limit(total))
       return whereMainProcess(group, whereCond, path, pathSegments)
     },
+    createQuery: () => (whereCond.length > 0) 
+      ? query(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments), ...whereCond)
+      : (group ? collectionGroup(db, path) : collection(db, path, ...pathSegments)),
     count: async () => (whereCond.length > 0
       ? await getCountFromServer(query(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments), ...whereCond)) 
       : await getCountFromServer(group ? collectionGroup(db, path) : collection(db, path, ...pathSegments))
@@ -142,6 +147,14 @@ const count = (path: string, ...pathSegments: string[]) => {
   };
 };
 
+const saveBatch = (ops: ((batch: WriteBatch) => void)[]) => {
+    while (ops.length) {
+      const batch = writeBatch(db);
+      ops.splice(0, 400).forEach((op) => op(batch));
+      batch.commit();
+    }
+}
+
 const getUserSavedItems = (userId: string) => {
   if (!userId) throw new Error("User ID is required");
 
@@ -155,9 +168,7 @@ export {
   add,
   all, collectionGroupName, collectionName, count, find,
   get, getUserSavedItems, map, orderBy,
-  remove,
-  serverTimestamp,
-  set,
+  remove, saveBatch, serverTimestamp, set,
   setUnMerged,
   update,
   where

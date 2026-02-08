@@ -39,7 +39,6 @@ const uploadImageUri = async (uri) => {
   formData.append("upload_preset", "images");
   // formData.append("upload_preset", "upload_file");
 
-  // 741351497561832
   const res = await axios.post(
     "https://api.cloudinary.com/v1_1/dnvnkh2md/image/upload",
     // "https://api.cloudinary.com/v1_1/diwwrxy8b/image/upload",

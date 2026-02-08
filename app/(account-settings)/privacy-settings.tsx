@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { find, set } from "@/helpers/db";
+import { find, update } from "@/helpers/db";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -26,7 +26,7 @@ const PrivacySettings = () => {
   const toggleStatus = () => {
     const v = !isOnline;
     setIsOnline(v);
-    set("users", userId).value({ online_status: v });
+    update("users", userId).value({ online_status: v });
   };
 
   return (

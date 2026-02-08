@@ -60,7 +60,7 @@ const Followers = () => {
               name: `${data.firstname} ${data.lastname}`,
               img_path: data.img_path
             })) 
-            setFollowers(_followers)
+          setFollowers(_followers)
         }
 
       if (followingIds.length == 0) return

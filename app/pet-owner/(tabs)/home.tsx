@@ -10,7 +10,7 @@ import {
   orderBy,
   remove,
   serverTimestamp,
-  set,
+  update,
   where
 } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
@@ -274,7 +274,7 @@ const Home = () => {
         }
 
         // 🔥 Update Firestore
-        set("posts", id).value({ liked_by_ids });
+        update("posts", id).value({ liked_by_ids });
 
         // 🔔 SEND NOTIFICATION (only if liking)
         if (isLiking) {

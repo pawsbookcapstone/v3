@@ -123,19 +123,8 @@ const Search = () => {
     });
   };
 
-  const handleRecentSelectUser = async (otherUser: any) => {
-    router.push({
-      pathname: "/pet-owner/chat-field",
-      params: {
-        otherUserId: otherUser.id,
-        otherUserName: otherUser.name,
-        otherUserImgPath: otherUser.img_path,
-      },
-    });
-  };
-
   const renderItem = ({ item }: { item: (typeof initialSearches)[0] }) => (
-    <TouchableOpacity onPress={() => handleRecentSelectUser(item)}>
+    <TouchableOpacity onPress={() => handleSelectUser(item)}>
       <View style={styles.item}>
         <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
           <Image source={{ uri: item.img_path }} style={styles.avatar} />

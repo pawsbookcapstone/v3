@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { all, remove, set } from "@/helpers/db";
+import { all, collectionName, remove, saveBatch, set } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
@@ -9,6 +9,7 @@ import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { WriteBatch } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Alert,
@@ -32,6 +33,21 @@ const addFriend = () => {
   const addNotif = useNotifHook();
 
   useOnFocusHook(() => {
+    collectionName("notifications")
+      .whereEquals("receiver_id", userId)
+      .whereEquals("seen", false)
+      .whereEquals("href", "/pet-owner/add-friend")
+      .get()
+      .then((s) => {
+        let v: ((batch: WriteBatch) => void)[] = [];
+        s.docs.forEach(dc => {
+          v.push((batch) => batch.update(dc.ref, {
+            seen: true
+          }))
+        });
+        saveBatch(v)
+      })
+
     onRefresh();
   }, [userId]);
 
@@ -191,7 +207,7 @@ const addFriend = () => {
     remove("friends", _friendRequestsData.id);
     addNotif({
       receiver_id: _friendRequestsData.other_user_id,
-      href: "/other-user/profile",
+      href: "/pet-owner/add-friend",
       type: "Decline Friend Request",
       params: {},
     });

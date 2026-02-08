@@ -4,7 +4,6 @@ import { computeTimePassed } from "@/helpers/timeConverter";
 import { useNotificationHook } from "@/hooks/notificationHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
-import SkeletalLoader from "@/shared/components/ChatSkeletal";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
@@ -21,135 +20,18 @@ import {
   FlatList,
   Image,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
-
-type Tchat = {
-  id: string;
-  name: string;
-  message: string;
-  avatar: string;
-  time: string;
-  lastMessage: string;
-  type: "personal" | "group"; // ✅ Added type field
-};
 
 const Chat = () => {
   const { userId, isPage } = useAppContext();
 
-  const [loading, setLoading] = useState(false);
-
-  const onRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-  };
-
-  const [onlineUsers, setOnlineUsers] = useState<any>([
-    // {
-    //   id: "1",
-    //   name: "Sophia",
-    //   avatar: "https://randomuser.me/api/portraits/women/65.jpg",
-    // },
-    // {
-    //   id: "2",
-    //   name: "James",
-    //   avatar: "https://randomuser.me/api/portraits/men/41.jpg",
-    // },
-    // {
-    //   id: "3",
-    //   name: "Olivia",
-    //   avatar: "https://randomuser.me/api/portraits/women/72.jpg",
-    // },
-    // {
-    //   id: "4",
-    //   name: "Liam",
-    //   avatar: "https://randomuser.me/api/portraits/men/50.jpg",
-    // },
-    // {
-    //   id: "5",
-    //   name: "Emma",
-    //   avatar: "https://randomuser.me/api/portraits/women/43.jpg",
-    // },
-    // {
-    //   id: "6",
-    //   name: "Noah",
-    //   avatar: "https://randomuser.me/api/portraits/men/52.jpg",
-    // },
-    // {
-    //   id: "7",
-    //   name: "Ava",
-    //   avatar: "https://randomuser.me/api/portraits/women/37.jpg",
-    // },
-    // {
-    //   id: "8",
-    //   name: "Mason",
-    //   avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-    // },
-  ]);
-
-  const [messages, setMessages] = useState<any>([
-    // {
-    //   id: "1",
-    //   name: "Sophia Miller",
-    //   avatar: "https://randomuser.me/api/portraits/women/65.jpg",
-    //   lastMessage: "Hey, how are you?",
-    //   time: "2m ago",
-    //   message: "",
-    //   type: "personal",
-    // },
-    // {
-    //   id: "2",
-    //   name: "James Anderson",
-    //   avatar: "https://randomuser.me/api/portraits/men/41.jpg",
-    //   lastMessage: "Let’s meet tomorrow.",
-    //   time: "10m ago",
-    //   message: "",
-    //   type: "personal",
-    // },
-    // {
-    //   id: "gc1",
-    //   name: "Pet Lovers",
-    //   avatar: "https://cdn-icons-png.flaticon.com/512/616/616408.png",
-    //   lastMessage: "New meetup this weekend!",
-    //   time: "1h ago",
-    //   message: "",
-    //   type: "group",
-    // },
-    // {
-    //   id: "gc2",
-    //   name: "Vet Team",
-    //   avatar: "https://cdn-icons-png.flaticon.com/512/616/616408.png",
-    //   lastMessage: "Patient update shared.",
-    //   time: "3h ago",
-    //   message: "",
-    //   type: "group",
-    // },
-    // {
-    //   id: "3",
-    //   name: "Olivia Taylor",
-    //   avatar: "https://randomuser.me/api/portraits/women/72.jpg",
-    //   lastMessage: "I sent the files.",
-    //   time: "1h ago",
-    //   message: "",
-    //   type: "personal",
-    // },
-    // {
-    //   id: "4",
-    //   name: "Liam Martinez",
-    //   avatar: "https://randomuser.me/api/portraits/men/50.jpg",
-    //   lastMessage: "See you soon!",
-    //   time: "3h ago",
-    //   message: "",
-    //   type: "personal",
-    // },
-  ]);
+  const [onlineUsers, setOnlineUsers] = useState<any>([]);
+  const [messages, setMessages] = useState<any>([]);
 
   const hasNotif = useNotificationHook();
 
@@ -165,20 +47,26 @@ const Chat = () => {
       setMessages(
         snapshot.docs.map((d) => {
           const t = d.data();
+          const seen = (t.seen_by_ids ?? []).some((user_id:string) => userId === user_id)
+
           if (t.group) {
             return {
               id: d.id,
               name: t.group_name,
               users: t.users,
               group: true,
+              seen,
               img_path: "",
               last_message: t.last_message ?? "No message yet.",
               time: computeTimePassed(t.last_sent_at?.toDate()),
             };
           }
+
           const otherUserId = t.users[0] === userId ? t.users[1] : t.users[0];
           return {
-            id: otherUserId,
+            user_id: otherUserId,
+            id: d.id,
+            seen,
             ...t[otherUserId],
             last_message: t.last_message,
             time: computeTimePassed(t.last_sent_at?.toDate()),
@@ -198,14 +86,15 @@ const Chat = () => {
           .map((res) => {
             const d = res.data();
             return {
-              id: res.id,
+              user_id: res.id,
               name: `${d.firstname} ${d.lastname}`,
+              group: d.is_page ?? false,
               avatar: d.img_path,
               active_status: d.active_status,
               last_online_at: d.last_online_at,
             };
           })
-          .filter((v) => v.id !== userId),
+          .filter((v) => v.user_id !== userId),
       );
     });
 
@@ -225,7 +114,7 @@ const Chat = () => {
       router.navigate({
         pathname: "/pet-owner/(chat)/chat-field",
         params: {
-          otherUserId: chat.id,
+          otherUserId: chat.user_id,
           otherUserName: chat.name,
           otherUserImgPath: chat.img_path ?? null,
         },
@@ -238,9 +127,12 @@ const Chat = () => {
       <Image source={{ uri: item.img_path }} style={styles.avatar} />
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.lastMessage}>{item.last_message}</Text>
+        <Text style={[styles.lastMessage, (!item.seen && {fontWeight: "800"} )]}>{item.last_message}</Text>
       </View>
-      <Text style={styles.time}>{item.time}</Text>
+      <View style={{alignItems:'flex-end'}}>
+        <Text style={styles.time}>{item.time}</Text>
+        {!item.seen && <View style={{backgroundColor: Colors.secondary, width: 7, height: 7, borderRadius: "50%", marginTop: 5}}/>}
+      </View>
     </Pressable>
   );
 
@@ -296,13 +188,13 @@ const Chat = () => {
 
       {/* Chat List */}
       <FlatList
-        data={loading ? [] : messages}
+        data={messages}
         keyExtractor={(item) => item.id}
         renderItem={renderMessage}
         ListHeaderComponent={
-          loading ? (
-            <SkeletalLoader />
-          ) : (
+          // loading ? (
+          //   <SkeletalLoader />
+          // ) : (
             <>
               {/* Online users */}
               <ScrollView
@@ -313,14 +205,15 @@ const Chat = () => {
               >
                 {onlineUsers.map((user: any) => (
                   <Pressable
-                    key={user.id}
+                    key={user.user_id}
                     style={styles.onlineUser}
                     onPress={() =>
                       handleChat({
-                        id: user.id,
+                        user_id: user.user_id,
                         name: user.name,
                         img_path: user.avatar,
                         message: "",
+                        group:user.group,
                         lastMessage: "",
                         time: "",
                         type: "personal",
@@ -343,11 +236,10 @@ const Chat = () => {
                 Messages
               </Text>
             </>
-          )
         }
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} />
-        }
+        // refreshControl={
+        //   <RefreshControl refreshing={loading} onRefresh={onRefresh} />
+        // }
         contentContainerStyle={{ paddingBottom: 20, marginTop: 5 }}
       />
     </View>

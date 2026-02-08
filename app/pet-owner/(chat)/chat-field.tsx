@@ -1,6 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
-import { add, find, set } from "@/helpers/db";
+import { add, collectionName, find, saveBatch, set, update } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
@@ -18,6 +18,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  WriteBatch,
 } from "firebase/firestore";
 import React, { useRef, useState } from "react";
 import {
@@ -59,9 +60,29 @@ const ChatField = () => {
 
   const renderLoadingButton = useLoadingHook(true)
 
+  const removeNotifForChat = () => {
+     collectionName("notifications")
+      .whereEquals("receiver_id", userId)
+      .whereEquals("sender_id", otherUserId)
+      .whereEquals("seen", false)
+      .whereEquals("href", "/pet-owner/chat-field")
+      .get()
+      .then((s) => {
+        let v: ((batch: WriteBatch) => void)[] = [];
+        s.docs.forEach(dc => {
+          v.push((batch) => batch.update(dc.ref, {
+            seen: true
+          }))
+        });
+        saveBatch(v)
+      })
+  }
+
   useOnFocusHook(() => {
     if (!userId) return
     
+    removeNotifForChat()
+
     const createDetails = async () => {
       const snap = await find("chats", chatId);
 
@@ -90,6 +111,15 @@ const ChatField = () => {
     });
 
     return () => {
+      find("chats", chatId)
+        .then(d => {
+          const seen_by_ids = d.data()?.seen_by_ids ?? []
+          if (seen_by_ids.some((id:string) => id === userId)) return
+
+          update("chats", chatId).value({
+            seen_by_ids: [...seen_by_ids, userId]
+          })
+        })
       unsubscribe();
     };
   }, []);
@@ -100,6 +130,7 @@ const ChatField = () => {
     set("chats", chatId).value({
       last_message: input.trim(),
       last_sent_at: serverTimestamp(),
+      seen_by_ids: [userId]
     });
     add("chats", chatId, "messages").value({
       message: input.trim(),
@@ -111,9 +142,9 @@ const ChatField = () => {
       href: "/pet-owner/chat-field",
       type: "Sent a Message",
       params: {
-        otherUserId,
-        otherUserName,
-        otherUserImgPath: otherUserImgPath ?? null,
+        otherUserId: userId,
+        otherUserName: userName,
+        otherUserImgPath: userImagePath ?? null,
       },
     });
     setInput("");
@@ -159,9 +190,9 @@ const ChatField = () => {
       href: "/pet-owner/chat-field",
       type: "Sent a Image",
       params: {
-        otherUserId,
-        otherUserName,
-        otherUserImgPath: otherUserImgPath ?? null,
+        otherUserId: userId,
+        otherUserName: userName,
+        otherUserImgPath: userImagePath ?? null,
       },
     });
   };

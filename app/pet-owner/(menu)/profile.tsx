@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, all, count, find, get, set, where } from "@/helpers/db";
+import { add, all, collectionName, count, find, get, saveBatch, set, where } from "@/helpers/db";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -14,7 +14,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { limit, orderBy, serverTimestamp } from "firebase/firestore";
+import { limit, orderBy, serverTimestamp, WriteBatch } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Image,
@@ -112,8 +112,24 @@ const Profile = () => {
   //   fetchProfile();
   // }, []);
 
+
   useOnFocusHook(() => {
     let mounted = true;
+
+    collectionName("notifications")
+      .whereEquals("receiver_id", userId)
+      .whereEquals("seen", false)
+      .whereEquals("href", "/pet-owner/profile")
+      .get()
+      .then((s) => {
+        let v: ((batch: WriteBatch) => void)[] = [];
+        s.docs.forEach(dc => {
+          v.push((batch) => batch.update(dc.ref, {
+            seen: true
+          }))
+        });
+        saveBatch(v)
+      })
 
     const fetchProfile = async () => {
       setLoading(true);
@@ -750,7 +766,7 @@ const Profile = () => {
                         placeholder="Write a comment..."
                         style={styles.commentInput}
                         value={comment}
-                onChangeText={setComment}
+                        onChangeText={setComment}
                         // onChangeText={(text) =>
                         //   setPosts((prev: any) =>
                         //     prev.map((p: any) =>

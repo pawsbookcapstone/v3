@@ -292,7 +292,6 @@ const Search = () => {
           },
         },
       });
-      console.log(res.id);
       
       addNotif({
         receiver_id: item.id,

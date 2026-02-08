@@ -1,6 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 
-import { find, serverTimestamp, set } from "@/helpers/db";
+import { find, serverTimestamp, update } from "@/helpers/db";
 import { auth } from "@/helpers/firebase";
 import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -74,7 +74,7 @@ const Login = () => {
       if (changed)
         AsyncStorage.setItem('profiles', profiles)
 
-      set("users", userId).value({ last_online_at: serverTimestamp(), active_status: 'active' });
+      update("users", userId).value({ last_online_at: serverTimestamp(), active_status: 'active' });
       //until here
       const user = userDoc.data();
       setUserId(userId);

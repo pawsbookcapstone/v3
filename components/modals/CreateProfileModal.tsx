@@ -117,7 +117,7 @@ const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
       return
     }
 
-    if (pageCreator){
+    if (pageCreator && pageCreator.id === profile.id){
       setUserId(pageCreator.id)
       setUserImagePath(pageCreator.img_path)
       setUserFirstName(pageCreator.firstname)
