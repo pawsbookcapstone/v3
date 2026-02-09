@@ -1,6 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import { moderateImage, moderateText } from "@/helpers/AI/ai";
-import { SafetyStatus } from "@/helpers/AI/types";
+import { SafetyStatus, Violation } from "@/helpers/AI/types";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { add, set } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
@@ -18,7 +18,9 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   Image,
+  Keyboard,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,7 +33,7 @@ import {
 type ImageType = {
   uri: string;
   scanning?: boolean;
-  errors?: any;
+  errors?: Violation[];
   status?: SafetyStatus | undefined;
 }
 
@@ -47,7 +49,10 @@ const PostScreen = () => {
 
   const [content, setContent] = useState("");
   const [images, setImages] = useState<ImageType[]>([]);
+  const [violations, setViolations] = useState<Violation[]>([]);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [violationTitle, setViolationTitle] = useState("Image");
+  const [showViolationModal, setShowViolationModal] = useState(false);
   const [taggedPets, setTaggedPets] = useState<
     { id: string; name: string; img_path: string }[]
   >([]);
@@ -137,60 +142,78 @@ const PostScreen = () => {
   };
 
   const handlePost = async () => {
+    Keyboard.dismiss();
     const safeImages = images.filter(s => s.status !== SafetyStatus.BLOCKED)
     if (!content.trim() && safeImages.length === 0)
       throw "Please add some text or an image."
 
+    try{
       const res = await moderateText(content.trim())
       console.log('Text AI Result: ', res);
       if (res.status === SafetyStatus.BLOCKED){
-        Alert.alert("Error", "Your message is not allowed!!!, Please revise before posting again.")
+        setViolationTitle("Text")
+        setViolations(res.violations)
+        setShowViolationModal(true)
         return
       }
-      if (res.status === SafetyStatus.WARNING){
-        Alert.alert("Warning", "Your message contains unwanted words!")
+      if (res.status === SafetyStatus.WARNING || (res.violations && res.violations.length > 0)){
+        setViolationTitle("Text")
+        setViolations(res.violations)
+        setShowViolationModal(true)
       }
+    } catch(e){
+      console.log(e);
+      Alert.alert("Warning", "AI validation is not available right now!!!")
+    }
 
-      let data: any = {
-        creator_id: userId,
-        creator_name: userName,
-        creator_img_path: userImagePath ?? null,
-        creator_is_page: isPage,
-        body: content.trim(),
-        date: serverTimestamp(),
-        shares: 0,
-      };
+    let data: any = {
+      creator_id: userId,
+      creator_name: userName,
+      creator_img_path: userImagePath ?? null,
+      creator_is_page: isPage,
+      body: content.trim(),
+      date: serverTimestamp(),
+      shares: 0,
+    };
 
-      if (taggedPets.length > 0) {
-        data.pets = taggedPets.map((p) => ({
-          name: p.name,
-          id: p.id,
-          img_path: p.img_path,
-        }));
+    if (taggedPets.length > 0) {
+      data.pets = taggedPets.map((p) => ({
+        name: p.name,
+        id: p.id,
+        img_path: p.img_path,
+      }));
+    }
+
+    if (safeImages.length > 0) {
+      const temp: string[] = [];
+      for (const img of safeImages) {
+        const img_url = await uploadImageUri(img.uri);
+        
+        temp.push(img_url);
       }
+      data.img_paths = temp;
+    }
 
-      if (safeImages.length > 0) {
-        const temp: string[] = [];
-        for (const img of safeImages) {
-          const img_url = await uploadImageUri(img.uri);
-          
-          temp.push(img_url);
-        }
-        data.img_paths = temp;
-      }
+    if (editPost?.id) {
+      // Edit existing post
+      await set("posts", editPost.id).value(data);
+      ToastAndroid.show("Post updated", ToastAndroid.SHORT);
+    } else {
+      // New post
+      await add("posts").value(data);
+      ToastAndroid.show("Post created", ToastAndroid.SHORT);
+    }
 
-      if (editPost?.id) {
-        // Edit existing post
-        await set("posts", editPost.id).value(data);
-        ToastAndroid.show("Post updated", ToastAndroid.SHORT);
-      } else {
-        // New post
-        await add("posts").value(data);
-        ToastAndroid.show("Post created", ToastAndroid.SHORT);
-      }
-
-      router.back();
+    router.back();
   };
+
+  const showImageViolations = (img:ImageType) => {
+    if (!img.errors || img.errors.length == 0) return
+
+    setViolationTitle("Image")
+    setViolations(img.errors ?? [])
+    setShowViolationModal(true)
+  }
 
   const handleBack = () => {
     if (content.trim() || images.length > 0 || taggedPets.length > 0) {
@@ -216,6 +239,19 @@ const PostScreen = () => {
     });
     router.push("/usable/pet-list");
   };
+
+  const getSeverityBGColor = (severity:string):string => {
+    if (severity === 'low') return Colors.primary;
+    if (severity === 'medium') return Colors.orange;
+    return Colors.red
+  }
+
+  const getImageIcon = (image:ImageType) => {
+    if (image.status === SafetyStatus.BLOCKED) return <MaterialIcons name="warning" color={Colors.red} size={23} />
+    if (image.status === SafetyStatus.WARNING || (image.errors && image.errors.length > 0))
+      return <MaterialIcons name="warning" color={Colors.primary} size={23} />
+    return <MaterialIcons name="thumb-up" color={Colors.secondary} size={23} />
+  }
 
   return (
     <View style={[screens.screen]}>
@@ -269,7 +305,9 @@ const PostScreen = () => {
             style={{ marginTop: 10 }}
           >
             {images.map((image, idx) => (
-              <View key={idx} style={{ position: "relative", marginRight: 10 }}>
+              <Pressable key={idx} style={{ position: "relative", marginRight: 10 }} 
+                onPress={() => showImageViolations(image)}
+              >
                 <Image source={{ uri: image.uri ?? "" }} style={styles.previewImage} />
                 {image.scanning && <View style={{
                     position:'absolute', 
@@ -293,9 +331,7 @@ const PostScreen = () => {
                     alignItems:"center", 
                     marginRight: 10
                 }}>
-                  {image.status == SafetyStatus.SAFE && (!image.errors || image.errors.length == 0) && <MaterialIcons name="thumb-up" color={Colors.secondary} size={23} />}
-                  {image.status == SafetyStatus.BLOCKED && <MaterialIcons name="warning" color={Colors.red} size={23} />}
-                  {image.status == SafetyStatus.WARNING || (image.status == SafetyStatus.SAFE && image.errors && image.errors.length > 0) && <MaterialIcons name="warning" color={Colors.primary} size={23} />}
+                  {getImageIcon(image)}
                 </View>}
                 {
                   image.scanning == false && 
@@ -308,7 +344,7 @@ const PostScreen = () => {
                     <Text style={{ color: "#fff", fontWeight: "bold" }}>X</Text>
                   </TouchableOpacity>
                 }
-              </View>
+              </Pressable>
             ))}
           </ScrollView>
         )}
@@ -371,6 +407,44 @@ const PostScreen = () => {
                 onPress={discardPost}
               >
                 <Text style={{ color: Colors.white }}>Discard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={showViolationModal} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{violationTitle} Violations</Text>
+
+            {violations.map((txt, idx) =>
+              <View key={idx} style={{display:'flex', flexWrap:'wrap', flexDirection: 'row', justifyContent: 'space-between', gap: 5, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: Colors.lightGray, paddingBottom: 5, }}>
+                <Text style={{fontSize: 18, fontWeight: '600', flex:1}}>
+                  {txt.category}
+                </Text>
+                <Text style={{
+                    fontSize: 14, 
+                    color:Colors.white, 
+                    paddingVertical: 2, 
+                    textAlign:'center',
+                    width: 60,
+                    borderRadius: 5, 
+                    backgroundColor: getSeverityBGColor(txt.severity.toLowerCase())
+                }}>
+                  {txt.severity.toLowerCase()}
+                </Text>
+
+                <Text style={{width:'100%'}}>{txt.reason}</Text>
+              </View>
+            )}
+
+            <View style={[styles.modalActions, {marginTop: 10}]}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: "#f0f0f0" }]}
+                onPress={() => setShowViolationModal(false)}
+              >
+                <Text style={{ color: "#333" }}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -496,8 +570,8 @@ const styles = StyleSheet.create({
     width: "80%",
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 19,
+    fontWeight: "700",
     marginBottom: 8,
   },
   modalMessage: {

@@ -15,7 +15,7 @@ export interface Guideline {
 export interface Violation {
   guidelineId: string;
   category: string;
-  severity: 'low' | 'medium' | 'high';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
   reason: string;
 }
 
