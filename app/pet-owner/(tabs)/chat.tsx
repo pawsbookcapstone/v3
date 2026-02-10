@@ -24,7 +24,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
 
 const Chat = () => {
@@ -47,7 +47,9 @@ const Chat = () => {
       setMessages(
         snapshot.docs.map((d) => {
           const t = d.data();
-          const seen = (t.seen_by_ids ?? []).some((user_id:string) => userId === user_id)
+          const seen = (t.seen_by_ids ?? []).some(
+            (user_id: string) => userId === user_id,
+          );
 
           if (t.group) {
             return {
@@ -127,11 +129,23 @@ const Chat = () => {
       <Image source={{ uri: item.img_path }} style={styles.avatar} />
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={[styles.lastMessage, (!item.seen && {fontWeight: "800"} )]}>{item.last_message}</Text>
+        <Text style={[styles.lastMessage, !item.seen && { fontWeight: "800" }]}>
+          {item.last_message}
+        </Text>
       </View>
-      <View style={{alignItems:'flex-end'}}>
+      <View style={{ alignItems: "flex-end" }}>
         <Text style={styles.time}>{item.time}</Text>
-        {!item.seen && <View style={{backgroundColor: Colors.secondary, width: 7, height: 7, borderRadius: "50%", marginTop: 5}}/>}
+        {!item.seen && (
+          <View
+            style={{
+              backgroundColor: Colors.secondary,
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              marginTop: 5,
+            }}
+          />
+        )}
       </View>
     </Pressable>
   );
@@ -195,47 +209,47 @@ const Chat = () => {
           // loading ? (
           //   <SkeletalLoader />
           // ) : (
-            <>
-              {/* Online users */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.onlineRow}
-                style={{ marginBottom: 8 }}
-              >
-                {onlineUsers.map((user: any) => (
-                  <Pressable
-                    key={user.user_id}
-                    style={styles.onlineUser}
-                    onPress={() =>
-                      handleChat({
-                        user_id: user.user_id,
-                        name: user.name,
-                        img_path: user.avatar,
-                        message: "",
-                        group:user.group,
-                        lastMessage: "",
-                        time: "",
-                        type: "personal",
-                      })
-                    }
-                  >
-                    <View style={styles.avatarWrapper}>
-                      <Image
-                        source={{ uri: user.avatar }}
-                        style={styles.onlineAvatar}
-                      />
-                      <View style={styles.onlineDot} />
-                    </View>
-                    <Text style={styles.onlineName}>{user.name}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+          <>
+            {/* Online users */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.onlineRow}
+              style={{ marginBottom: 8 }}
+            >
+              {onlineUsers.map((user: any) => (
+                <Pressable
+                  key={user.user_id}
+                  style={styles.onlineUser}
+                  onPress={() =>
+                    handleChat({
+                      user_id: user.user_id,
+                      name: user.name,
+                      img_path: user.avatar,
+                      message: "",
+                      group: user.group,
+                      lastMessage: "",
+                      time: "",
+                      type: "personal",
+                    })
+                  }
+                >
+                  <View style={styles.avatarWrapper}>
+                    <Image
+                      source={{ uri: user.avatar }}
+                      style={styles.onlineAvatar}
+                    />
+                    <View style={styles.onlineDot} />
+                  </View>
+                  <Text style={styles.onlineName}>{user.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
 
-              <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-                Messages
-              </Text>
-            </>
+            <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
+              Messages
+            </Text>
+          </>
         }
         // refreshControl={
         //   <RefreshControl refreshing={loading} onRefresh={onRefresh} />

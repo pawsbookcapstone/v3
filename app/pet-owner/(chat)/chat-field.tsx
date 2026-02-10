@@ -1,6 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
 import { uploadImageUri } from "@/helpers/cloudinary";
-import { add, collectionName, find, saveBatch, set, update } from "@/helpers/db";
+import {
+  add,
+  collectionName,
+  find,
+  saveBatch,
+  set,
+  update,
+} from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
@@ -37,14 +44,14 @@ import {
 // const chatId = "1MpmIvxBRbSYXbmsPLQb";
 
 const ChatField = () => {
-  const { userId, userImagePath, userName} = useAppContext();
+  const { userId, userImagePath, userName } = useAppContext();
   const addNotif = useNotifHook();
 
   const {
     otherUserId,
     otherUserName,
     otherUserImgPath,
-  }: { otherUserId: string; otherUserName: string; otherUserImgPath: string;  } =
+  }: { otherUserId: string; otherUserName: string; otherUserImgPath: string } =
     useLocalSearchParams();
 
   const [chatId] = useState(generateChatId(userId, otherUserId));
@@ -58,10 +65,10 @@ const ChatField = () => {
 
   const flatListRef = useRef<FlatList>(null);
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   const removeNotifForChat = () => {
-     collectionName("notifications")
+    collectionName("notifications")
       .whereEquals("receiver_id", userId)
       .whereEquals("sender_id", otherUserId)
       .whereEquals("seen", false)
@@ -69,19 +76,21 @@ const ChatField = () => {
       .get()
       .then((s) => {
         let v: ((batch: WriteBatch) => void)[] = [];
-        s.docs.forEach(dc => {
-          v.push((batch) => batch.update(dc.ref, {
-            seen: true
-          }))
+        s.docs.forEach((dc) => {
+          v.push((batch) =>
+            batch.update(dc.ref, {
+              seen: true,
+            }),
+          );
         });
-        saveBatch(v)
-      })
-  }
+        saveBatch(v);
+      });
+  };
 
   useOnFocusHook(() => {
-    if (!userId) return
-    
-    removeNotifForChat()
+    if (!userId) return;
+
+    removeNotifForChat();
 
     const createDetails = async () => {
       const snap = await find("chats", chatId);
@@ -111,15 +120,14 @@ const ChatField = () => {
     });
 
     return () => {
-      find("chats", chatId)
-        .then(d => {
-          const seen_by_ids = d.data()?.seen_by_ids ?? []
-          if (seen_by_ids.some((id:string) => id === userId)) return
+      find("chats", chatId).then((d) => {
+        const seen_by_ids = d.data()?.seen_by_ids ?? [];
+        if (seen_by_ids.some((id: string) => id === userId)) return;
 
-          update("chats", chatId).value({
-            seen_by_ids: [...seen_by_ids, userId]
-          })
-        })
+        update("chats", chatId).value({
+          seen_by_ids: [...seen_by_ids, userId],
+        });
+      });
       unsubscribe();
     };
   }, []);
@@ -130,7 +138,7 @@ const ChatField = () => {
     set("chats", chatId).value({
       last_message: input.trim(),
       last_sent_at: serverTimestamp(),
-      seen_by_ids: [userId]
+      seen_by_ids: [userId],
     });
     add("chats", chatId, "messages").value({
       message: input.trim(),
@@ -164,7 +172,7 @@ const ChatField = () => {
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) 
+    if (!permissionResult.granted)
       throw "Permission to access camera is required!";
 
     const result = await ImagePicker.launchCameraAsync({
@@ -203,17 +211,17 @@ const ChatField = () => {
       return;
     }
 
-    const d = await find("users", otherUserId)
-    const isPage = d.data()?.is_page ?? false
-    
-    if (isPage){
+    const d = await find("users", otherUserId);
+    const isPage = d.data()?.is_page ?? false;
+
+    if (isPage) {
       router.push({
         pathname: "/other-user/profile",
         params: { pageId: otherUserId },
       });
-      return
+      return;
     }
-    
+
     router.push({
       pathname: "/usable/user-profile",
       params: { userToViewId: otherUserId },
@@ -314,15 +322,17 @@ const ChatField = () => {
           <View style={styles.inputRow}>
             {renderLoadingButton({
               style: styles.iconButton,
-              children: <MaterialIcons
-                name="photo-camera"
-                size={24}
-                color={Colors.primary}
-              />,
+              children: (
+                <MaterialIcons
+                  name="photo-camera"
+                  size={24}
+                  color={Colors.primary}
+                />
+              ),
               hideLoadingText: true,
               spinnerColor: Colors.primary,
               spinnerSize: 24,
-              onPress: pickImage
+              onPress: pickImage,
             })}
             {/* <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
               <MaterialIcons

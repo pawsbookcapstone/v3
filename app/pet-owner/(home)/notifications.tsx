@@ -23,41 +23,6 @@ import {
   View,
 } from "react-native";
 
-// // Dummy notifications data
-// const notificationsData: NotificationItem[] = [
-//   {
-//     id: "1",
-//     name: "John Doe",
-//     profile: "https://randomuser.me/api/portraits/men/32.jpg",
-//     description: "liked your post",
-//     type: "like",
-//     time: "2025-09-19T21:00:00Z",
-//   },
-//   {
-//     id: "2",
-//     name: "Jane Smith",
-//     profile: "https://randomuser.me/api/portraits/women/44.jpg",
-//     description: "commented on your photo",
-//     type: "comment",
-//     time: "2025-09-19T20:30:00Z",
-//   },
-//   {
-//     id: "3",
-//     name: "Alex Carter",
-//     profile: "https://randomuser.me/api/portraits/men/12.jpg",
-//     description: "sent you a friend request",
-//     type: "friend_request",
-//     time: "2025-09-19T19:30:00Z",
-//   },
-//   {
-//     id: "4",
-//     name: "Emma Wilson",
-//     profile: "https://randomuser.me/api/portraits/women/22.jpg",
-//     description: "mentioned you in a comment",
-//     type: "mention",
-//     time: "2025-09-15T10:00:00Z",
-//   },
-// ];
 type NotificationItem = {
   id: string;
   name: string;

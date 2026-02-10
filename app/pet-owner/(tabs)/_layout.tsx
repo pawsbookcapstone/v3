@@ -4,30 +4,60 @@ import { Image, ImageSourcePropType, View } from "react-native";
 
 import { useAppContext } from "@/AppsProvider";
 import { HapticTab } from "@/components/haptic-tab";
+import { collectionName } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
-import { collection, limit, onSnapshot, query, where } from "firebase/firestore";
+import {
+  collection,
+  limit,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
 
 export default function TabLayout() {
   const { userId, isPage } = useAppContext();
   const [hasPendingRequests, setHasPendingRequests] = useState(false);
+  const [hasUnreadMessage, setUnreadMessage] = useState(false);
   const [focused, setFocused] = useState(true);
 
-
   useOnFocusHook(() => {
-    setFocused(true)
-    return () => setFocused(false)
-  }, [])
+    setFocused(true);
+    return () => setFocused(false);
+  }, []);
 
   useEffect(() => {
     if (!userId || !focused) return;
 
-    const q = query(collection(db, "friends"), 
-      where("users", 'array-contains', userId), 
-      where('confirmed', '==', false), 
+    const mq = collectionName("chats")
+      .whereArrayContains("users", userId)
+      .orderByDesc("last_sent_at")
+      .createQuery();
+
+    const unsubscribeMessage = onSnapshot(mq, (snapshot) => {
+      let has = false;
+      for (const dc of snapshot.docs) {
+        const d = dc.data();
+
+        if (
+          d.last_message &&
+          d.seen_by_ids &&
+          !d.seen_by_ids.some((j: string) => j === userId)
+        ) {
+          has = true;
+          break;
+        }
+      }
+      setUnreadMessage(has);
+    });
+
+    const q = query(
+      collection(db, "friends"),
+      where("users", "array-contains", userId),
+      where("confirmed", "==", false),
       where("requested_by_id", "!=", userId),
-      limit(1)
+      limit(1),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -36,14 +66,17 @@ export default function TabLayout() {
       setHasPendingRequests(count > 0);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubscribeMessage();
+    };
   }, [userId, focused]);
 
   const renderIcon = (
     focused: boolean,
     activeIcon: ImageSourcePropType,
     inactiveIcon: ImageSourcePropType,
-    showBadge?: boolean
+    showBadge?: boolean,
   ) => (
     <View style={{ width: 30, height: 30 }}>
       <Image
@@ -55,7 +88,7 @@ export default function TabLayout() {
         }}
         resizeMode="contain"
       />
-      {showBadge && hasPendingRequests && (
+      {showBadge && (
         <View
           style={{
             position: "absolute",
@@ -96,7 +129,7 @@ export default function TabLayout() {
             renderIcon(
               focused,
               require("../../../assets/Icons/home-fill.png"),
-              require("../../../assets/Icons/home-outline.png")
+              require("../../../assets/Icons/home-outline.png"),
             ),
         }}
       />
@@ -110,7 +143,7 @@ export default function TabLayout() {
             renderIcon(
               focused,
               require("../../../assets/Icons/store-fill.png"),
-              require("../../../assets/Icons/store-outline.png")
+              require("../../../assets/Icons/store-outline.png"),
             ),
         }}
       />
@@ -125,7 +158,7 @@ export default function TabLayout() {
               focused,
               require("../../../assets/Icons/friend-fill.png"),
               require("../../../assets/Icons/friend-outline.png"),
-              hasPendingRequests
+              hasPendingRequests,
             ),
         }}
       />
@@ -138,7 +171,8 @@ export default function TabLayout() {
             renderIcon(
               focused,
               require("../../../assets/Icons/chat-fill.png"),
-              require("../../../assets/Icons/chat-outline.png")
+              require("../../../assets/Icons/chat-outline.png"),
+              hasUnreadMessage,
             ),
         }}
       />
@@ -151,7 +185,7 @@ export default function TabLayout() {
             renderIcon(
               focused,
               require("../../../assets/Icons/menu-fill.png"),
-              require("../../../assets/Icons/menu-outline.png")
+              require("../../../assets/Icons/menu-outline.png"),
             ),
         }}
       />

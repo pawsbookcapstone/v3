@@ -32,14 +32,14 @@ export const AppsProvider = ({ children }) => {
     const subscription = AppState.addEventListener("change", async (state) => {
       updateDoc(doc(db, "users", userId), {
         last_online_at: serverTimestamp(), active_status: state == 'active' ? 'active' : 'inactive'
-      }, { merge: true })
+      })
     });
 
     return () => {
+      subscription.remove();
       updateDoc(doc(db, "users", userId), {
         last_online_at: serverTimestamp(), active_status: 'inactive'
-      }, { merge: true })
-      subscription.remove();
+      })
     }
   }, [userId]);
 

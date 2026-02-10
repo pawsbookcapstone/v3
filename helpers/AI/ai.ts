@@ -1,17 +1,17 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { IMAGE_GUIDELINES, TEXT_GUIDELINES } from "./GUIDELINES";
 import { ModerationResult, SafetyStatus } from "./types";
 
-const ai = new GoogleGenAI({ apiKey: CHANGE_THIS });
+const ai = new GoogleGenAI({
+  apiKey: CHANGE_THIS,
+});
 
 export const moderateImage = async (
-  imageBase64: string
+  imageBase64: string,
 ): Promise<ModerationResult> => {
-  const enabledGuidelines = IMAGE_GUIDELINES
-    .filter(g => g.enabled)
-    .map(g => `${g.name}: ${g.description}`)
-    .join('\n');
+  const enabledGuidelines = IMAGE_GUIDELINES.filter((g) => g.enabled)
+    .map((g) => `${g.name}: ${g.description}`)
+    .join("\n");
 
   const prompt = `
     You are a professional AI Content Moderator for a major social media platform.
@@ -28,7 +28,7 @@ export const moderateImage = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: "gemini-3-flash-preview",
       contents: [
         {
           parts: [
@@ -36,7 +36,7 @@ export const moderateImage = async (
             {
               inlineData: {
                 mimeType: "image/jpeg",
-                data: imageBase64.split(',')[1],
+                data: imageBase64.split(",")[1],
               },
             },
           ],
@@ -49,11 +49,12 @@ export const moderateImage = async (
           properties: {
             status: {
               type: Type.STRING,
-              description: 'The overall safety status: SAFE, WARNING, or BLOCKED',
+              description:
+                "The overall safety status: SAFE, WARNING, or BLOCKED",
             },
             score: {
               type: Type.NUMBER,
-              description: 'Safety score from 0 to 100',
+              description: "Safety score from 0 to 100",
             },
             violations: {
               type: Type.ARRAY,
@@ -61,20 +62,23 @@ export const moderateImage = async (
                 type: Type.OBJECT,
                 properties: {
                   category: { type: Type.STRING },
-                  severity: { type: Type.STRING, description: 'low, medium, or high' },
+                  severity: {
+                    type: Type.STRING,
+                    description: "low, medium, or high",
+                  },
                   reason: { type: Type.STRING },
                 },
               },
             },
           },
-          required: ['status', 'score'],
+          required: ["status", "score"],
         },
       },
     });
 
-    const result = JSON.parse(response.text || '{}');
+    const result = JSON.parse(response.text || "{}");
     return {
-      status: result.status as SafetyStatus || SafetyStatus.BLOCKED,
+      status: (result.status as SafetyStatus) || SafetyStatus.BLOCKED,
       score: result.score || 0,
       violations: result.violations || [],
     };
@@ -86,15 +90,14 @@ export const moderateImage = async (
       violations: [],
     };
   }
-}
+};
 
 export const moderateText = async (
-  message: string
+  message: string,
 ): Promise<ModerationResult> => {
-  const enabledGuidelines = TEXT_GUIDELINES
-    .filter(g => g.enabled)
-    .map(g => `${g.name}: ${g.description}`)
-    .join('\n');
+  const enabledGuidelines = TEXT_GUIDELINES.filter((g) => g.enabled)
+    .map((g) => `${g.name}: ${g.description}`)
+    .join("\n");
 
   const prompt = `
 You are a professional AI Content Moderator for a major social media platform.
@@ -150,7 +153,7 @@ Instructions:
     const result = JSON.parse(response.text || "{}");
 
     return {
-      status: result.status as SafetyStatus || SafetyStatus.BLOCKED,
+      status: (result.status as SafetyStatus) || SafetyStatus.BLOCKED,
       score: result.score ?? 0,
       violations: result.violations ?? [],
     };
@@ -162,5 +165,4 @@ Instructions:
       violations: [],
     };
   }
-}
-
+};
