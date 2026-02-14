@@ -2,7 +2,7 @@ import { useAppContext } from "@/AppsProvider";
 import { moderateImage, moderateText } from "@/helpers/AI/ai";
 import { SafetyStatus, Violation } from "@/helpers/AI/types";
 import { uploadImageUri } from "@/helpers/cloudinary";
-import { add, set } from "@/helpers/db";
+import { add, setUnMerged } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -27,7 +27,7 @@ import {
   TextInput,
   ToastAndroid,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 type ImageType = {
@@ -35,7 +35,9 @@ type ImageType = {
   scanning?: boolean;
   errors?: Violation[];
   status?: SafetyStatus | undefined;
-}
+};
+
+const USE_AI = false;
 
 const PostScreen = () => {
   const [editPost, setEditPost] = useState<any>(null);
@@ -44,7 +46,7 @@ const PostScreen = () => {
 
   const router = useRouter();
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
   // const { taggedPets: taggedPetsParam } = useLocalSearchParams();
 
   const [content, setContent] = useState("");
@@ -59,22 +61,34 @@ const PostScreen = () => {
   const params = useLocalSearchParams();
 
   useOnFocusHook(() => {
-    if (!params.editPost) return
+    if (!params.editPost) return;
 
     try {
       const post = JSON.parse(params.editPost as string);
       setEditPost(post);
       setContent(post.body || "");
-      setImages(post.img_paths || []);
+      // setImages(post.img_paths || []);
       setTaggedPets(post.pets || []);
+
+      if (post?.img_paths && post.img_paths.length > 0) {
+        const formattedImages: ImageType[] = post.img_paths.map(
+          (path: string) => ({
+            uri: path,
+            scanning: false,
+            status: SafetyStatus.SAFE,
+          }),
+        );
+
+        setImages(formattedImages);
+      }
     } catch (e) {
       console.warn("Invalid editPost param", e);
     }
   }, []);
 
   const isScanning = useMemo(() => {
-    return images.some(f => f.scanning)
-  }, [images])
+    return images.some((f) => f.scanning);
+  }, [images]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -85,28 +99,11 @@ const PostScreen = () => {
       base64: true,
     });
 
-    if (result.canceled || result.assets.length == 0) return
+    if (result.canceled || result.assets.length == 0) return;
 
-    const asset = result.assets[0]
-    
-    const dataUrl = `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`;
-    const idx = images.length
-    moderateImage(dataUrl)
-      .then(res => {
-        console.log('Image AI Result: ', res);
-        
-        setImages(_images => {
-          const img = _images[idx]
-          img.scanning = false
-          img.status = res.status
-          if (res.violations && res.violations.length > 0)
-            img.errors = res.violations
-          console.log(img);
-          return [..._images]
-        })
-      })
+    const asset = result.assets[0];
 
-    setImages((prev) => [...prev, {uri:asset.uri, scanning: true}]);
+    _moderateImage(asset);
   };
 
   const takePhoto = async () => {
@@ -114,56 +111,71 @@ const PostScreen = () => {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
-      base64: true
+      base64: true,
     });
 
-    if (result.canceled || result.assets.length == 0) return
+    if (result.canceled || result.assets.length == 0) return;
 
-    const asset = result.assets[0]
-    
+    const asset = result.assets[0];
+
+    _moderateImage(asset);
+  };
+
+  const _moderateImage = (asset: any) => {
+    if (!USE_AI) {
+      setImages((prev) => [
+        ...prev,
+        { uri: asset.uri, scanning: false, status: SafetyStatus.SAFE },
+      ]);
+      return;
+    }
+
     const dataUrl = `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`;
-    const idx = images.length
-    moderateImage(dataUrl)
-      .then(res => {
-        console.log('Image AI Result: ', res);
-        
-        setImages(_images => {
-          const img = _images[idx]
-          img.scanning = false
-          img.status = res.status
-          if (res.violations && res.violations.length > 0)
-            img.errors = res.violations
-          console.log(img);
-          return [..._images]
-        })
-      })
+    const idx = images.length;
+    moderateImage(dataUrl).then((res) => {
+      console.log("Image AI Result: ", res);
 
-    setImages((prev) => [...prev, {uri:asset.uri, scanning: true}]);
+      setImages((_images) => {
+        const img = _images[idx];
+        img.scanning = false;
+        img.status = res.status;
+        if (res.violations && res.violations.length > 0)
+          img.errors = res.violations;
+        return [..._images];
+      });
+    });
+
+    setImages((prev) => [...prev, { uri: asset.uri, scanning: true }]);
   };
 
   const handlePost = async () => {
     Keyboard.dismiss();
-    const safeImages = images.filter(s => s.status !== SafetyStatus.BLOCKED)
+    const safeImages = images.filter((s) => s.status !== SafetyStatus.BLOCKED);
     if (!content.trim() && safeImages.length === 0)
-      throw "Please add some text or an image."
+      throw "Please add some text or an image.";
 
-    try{
-      const res = await moderateText(content.trim())
-      console.log('Text AI Result: ', res);
-      if (res.status === SafetyStatus.BLOCKED){
-        setViolationTitle("Text")
-        setViolations(res.violations)
-        setShowViolationModal(true)
-        return
+    if (USE_AI) {
+      try {
+        const res = await moderateText(content.trim());
+        console.log("Text AI Result: ", res);
+        if (res.status === SafetyStatus.BLOCKED) {
+          setViolationTitle("Text");
+          setViolations(res.violations);
+          setShowViolationModal(true);
+          return;
+        }
+        if (
+          res.status === SafetyStatus.WARNING ||
+          (res.violations && res.violations.length > 0)
+        ) {
+          setViolationTitle("Text");
+          setViolations(res.violations);
+          setShowViolationModal(true);
+        }
+      } catch (e) {
+        console.log(e);
+        Alert.alert("Warning", "AI validation is not available right now!!!");
       }
-      if (res.status === SafetyStatus.WARNING || (res.violations && res.violations.length > 0)){
-        setViolationTitle("Text")
-        setViolations(res.violations)
-        setShowViolationModal(true)
-      }
-    } catch(e){
-      console.log(e);
-      Alert.alert("Warning", "AI validation is not available right now!!!")
     }
 
     let data: any = {
@@ -188,7 +200,7 @@ const PostScreen = () => {
       const temp: string[] = [];
       for (const img of safeImages) {
         const img_url = await uploadImageUri(img.uri);
-        
+
         temp.push(img_url);
       }
       data.img_paths = temp;
@@ -196,7 +208,7 @@ const PostScreen = () => {
 
     if (editPost?.id) {
       // Edit existing post
-      await set("posts", editPost.id).value(data);
+      await setUnMerged("posts", editPost.id).value(data);
       ToastAndroid.show("Post updated", ToastAndroid.SHORT);
     } else {
       // New post
@@ -207,13 +219,13 @@ const PostScreen = () => {
     router.back();
   };
 
-  const showImageViolations = (img:ImageType) => {
-    if (!img.errors || img.errors.length == 0) return
+  const showImageViolations = (img: ImageType) => {
+    if (!img.errors || img.errors.length == 0) return;
 
-    setViolationTitle("Image")
-    setViolations(img.errors ?? [])
-    setShowViolationModal(true)
-  }
+    setViolationTitle("Image");
+    setViolations(img.errors ?? []);
+    setShowViolationModal(true);
+  };
 
   const handleBack = () => {
     if (content.trim() || images.length > 0 || taggedPets.length > 0) {
@@ -240,24 +252,28 @@ const PostScreen = () => {
     router.push("/usable/pet-list");
   };
 
-  const getSeverityBGColor = (severity:string):string => {
-    if (severity === 'low') return Colors.primary;
-    if (severity === 'medium') return Colors.orange;
-    return Colors.red
-  }
+  const getSeverityBGColor = (severity: string): string => {
+    if (severity === "low") return Colors.primary;
+    if (severity === "medium") return Colors.orange;
+    return Colors.red;
+  };
 
-  const getImageIcon = (image:ImageType) => {
-    if (image.status === SafetyStatus.BLOCKED) return <MaterialIcons name="warning" color={Colors.red} size={23} />
-    if (image.status === SafetyStatus.WARNING || (image.errors && image.errors.length > 0))
-      return <MaterialIcons name="warning" color={Colors.primary} size={23} />
-    return <MaterialIcons name="thumb-up" color={Colors.secondary} size={23} />
-  }
+  const getImageIcon = (image: ImageType) => {
+    if (image.status === SafetyStatus.BLOCKED)
+      return <MaterialIcons name="warning" color={Colors.red} size={23} />;
+    if (
+      image.status === SafetyStatus.WARNING ||
+      (image.errors && image.errors.length > 0)
+    )
+      return <MaterialIcons name="warning" color={Colors.primary} size={23} />;
+    return <MaterialIcons name="thumb-up" color={Colors.secondary} size={23} />;
+  };
 
   return (
     <View style={[screens.screen]}>
       <HeaderLayout noBorderRadius bottomBorder>
         <HeaderWithActions
-          title="Create Post"
+          title={`${params?.editPost ? "Edit" : "Create"} Post`}
           onBack={handleBack}
           centerTitle={true}
         />
@@ -305,45 +321,57 @@ const PostScreen = () => {
             style={{ marginTop: 10 }}
           >
             {images.map((image, idx) => (
-              <Pressable key={idx} style={{ position: "relative", marginRight: 10 }} 
+              <Pressable
+                key={idx}
+                style={{ position: "relative", marginRight: 10 }}
                 onPress={() => showImageViolations(image)}
               >
-                <Image source={{ uri: image.uri ?? "" }} style={styles.previewImage} />
-                {image.scanning && <View style={{
-                    position:'absolute', 
-                    inset: 0, 
-                    backgroundColor: Colors.black, 
-                    opacity: 0.4, 
-                    display: 'flex', 
-                    borderRadius: 10,
-                    justifyContent:'center', 
-                    alignItems:"center", 
-                    marginRight: 10
-                }}>
-                  <Loader2 color={Colors.white} />
-                </View>}
-                {image.scanning == false && <View style={{
-                    position:'absolute', 
-                    inset: 0, 
-                    display: 'flex', 
-                    borderRadius: 10,
-                    justifyContent:'center', 
-                    alignItems:"center", 
-                    marginRight: 10
-                }}>
-                  {getImageIcon(image)}
-                </View>}
-                {
-                  image.scanning == false && 
+                <Image
+                  source={{ uri: image.uri ?? "" }}
+                  style={styles.previewImage}
+                />
+                {image.scanning && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      backgroundColor: Colors.black,
+                      opacity: 0.4,
+                      display: "flex",
+                      borderRadius: 10,
+                      justifyContent: "center",
+                      alignItems: "center",
+                      marginRight: 10,
+                    }}
+                  >
+                    <Loader2 color={Colors.white} />
+                  </View>
+                )}
+                {image.scanning == false && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      borderRadius: 10,
+                      justifyContent: "center",
+                      alignItems: "center",
+                      marginRight: 10,
+                    }}
+                  >
+                    {getImageIcon(image)}
+                  </View>
+                )}
+                {image.scanning == false && (
                   <TouchableOpacity
                     style={styles.removeImageBtn}
                     onPress={() => {
-                      setImages(images.filter((_, i) => i !== idx))
+                      setImages(images.filter((_, i) => i !== idx));
                     }}
                   >
                     <Text style={{ color: "#fff", fontWeight: "bold" }}>X</Text>
                   </TouchableOpacity>
-                }
+                )}
               </Pressable>
             ))}
           </ScrollView>
@@ -361,23 +389,27 @@ const PostScreen = () => {
             <Text style={styles.actionText}> Camera</Text>
           </TouchableOpacity>
 
-          {
-            !isPage &&
+          {!isPage && (
             <TouchableOpacity style={styles.actionBtn} onPress={handleTag}>
               <Entypo name="price-tag" size={20} color={"#007AFF"} />
               <Text style={styles.actionText}> Tag Pets</Text>
             </TouchableOpacity>
-          }
+          )}
         </View>
 
         {/* Post Button */}
         {renderLoadingButton({
-          style: [styles.postButton, (isScanning && {backgroundColor: Colors.disabled})],
-          children: <Text style={styles.postText}>
-            {editPost ? "Update Post" : "Post"}
-          </Text>,
+          style: [
+            styles.postButton,
+            isScanning && { backgroundColor: Colors.disabled },
+          ],
+          children: (
+            <Text style={styles.postText}>
+              {editPost ? "Update Post" : "Post"}
+            </Text>
+          ),
           disabled: isScanning,
-          onPress: handlePost
+          onPress: handlePost,
         })}
         {/* <TouchableOpacity style={styles.postButton} onPress={handlePost}>
           <Text style={styles.postText}>
@@ -418,28 +450,45 @@ const PostScreen = () => {
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>{violationTitle} Violations</Text>
 
-            {violations.map((txt, idx) =>
-              <View key={idx} style={{display:'flex', flexWrap:'wrap', flexDirection: 'row', justifyContent: 'space-between', gap: 5, marginBottom: 6, borderBottomWidth: 1, borderBottomColor: Colors.lightGray, paddingBottom: 5, }}>
-                <Text style={{fontSize: 18, fontWeight: '600', flex:1}}>
+            {violations.map((txt, idx) => (
+              <View
+                key={idx}
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 5,
+                  marginBottom: 6,
+                  borderBottomWidth: 1,
+                  borderBottomColor: Colors.lightGray,
+                  paddingBottom: 5,
+                }}
+              >
+                <Text style={{ fontSize: 18, fontWeight: "600", flex: 1 }}>
                   {txt.category}
                 </Text>
-                <Text style={{
-                    fontSize: 14, 
-                    color:Colors.white, 
-                    paddingVertical: 2, 
-                    textAlign:'center',
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: Colors.white,
+                    paddingVertical: 2,
+                    textAlign: "center",
                     width: 60,
-                    borderRadius: 5, 
-                    backgroundColor: getSeverityBGColor(txt.severity.toLowerCase())
-                }}>
+                    borderRadius: 5,
+                    backgroundColor: getSeverityBGColor(
+                      txt.severity.toLowerCase(),
+                    ),
+                  }}
+                >
                   {txt.severity.toLowerCase()}
                 </Text>
 
-                <Text style={{width:'100%'}}>{txt.reason}</Text>
+                <Text style={{ width: "100%" }}>{txt.reason}</Text>
               </View>
-            )}
+            ))}
 
-            <View style={[styles.modalActions, {marginTop: 10}]}>
+            <View style={[styles.modalActions, { marginTop: 10 }]}>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: "#f0f0f0" }]}
                 onPress={() => setShowViolationModal(false)}

@@ -3,7 +3,7 @@ import { IMAGE_GUIDELINES, TEXT_GUIDELINES } from "./GUIDELINES";
 import { ModerationResult, SafetyStatus } from "./types";
 
 const ai = new GoogleGenAI({
-  apiKey: CHANGE_THIS,
+  apiKey: "CHANGE_THIS",
 });
 
 export const moderateImage = async (

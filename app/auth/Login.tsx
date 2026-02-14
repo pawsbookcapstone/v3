@@ -6,7 +6,7 @@ import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
 import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
@@ -17,12 +17,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const Login = () => {
-  const {email:emailToSwitch}:any = useLocalSearchParams()
+  const { email: emailToSwitch }: any = useLocalSearchParams();
 
+  // const [email, setemail] = useState(emailToSwitch ?? "");
+  // const [password, setpassword] = useState("");
   const [email, setemail] = useState(emailToSwitch ?? "email@gmail.com");
   const [password, setpassword] = useState("PASSWORD");
   //ad's account
@@ -30,7 +32,7 @@ const Login = () => {
   // const [password, setpassword] = useState("PASSWORD");
   const [showPassword, setShowPassword] = useState(false);
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   const {
     setUserId,
@@ -42,9 +44,9 @@ const Login = () => {
 
   const onLogin = async () => {
     if (!email || !password) {
-      throw "Please fill in all fields!!!"
+      throw "Please fill in all fields!!!";
     }
-    
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -52,7 +54,7 @@ const Login = () => {
         password,
       );
 
-      const userId = userCredential.user.uid
+      const userId = userCredential.user.uid;
 
       const userDoc = await find("users", userId);
 
@@ -61,20 +63,19 @@ const Login = () => {
         throw "Account not found!!!";
       }
 
-      let profiles = await AsyncStorage.getItem('profiles')
-      let changed = true
-      if (!profiles)
-        profiles = userId
+      let profiles = await AsyncStorage.getItem("profiles");
+      let changed = true;
+      if (!profiles) profiles = userId;
       else {
-        if (!profiles.includes(userId))
-          profiles += ',' + userId
-        else
-          changed = false
+        if (!profiles.includes(userId)) profiles += "," + userId;
+        else changed = false;
       }
-      if (changed)
-        AsyncStorage.setItem('profiles', profiles)
+      if (changed) AsyncStorage.setItem("profiles", profiles);
 
-      update("users", userId).value({ last_online_at: serverTimestamp(), active_status: 'active' });
+      update("users", userId).value({
+        last_online_at: serverTimestamp(),
+        active_status: "active",
+      });
       //until here
       const user = userDoc.data();
       setUserId(userId);
@@ -88,11 +89,13 @@ const Login = () => {
       });
     } catch (e) {
       // Alert.alert("Error", e + "");
-      const error = e+ ""
-      if (error.includes("(auth/network-request-failed)")) throw "No internet connection"
-      if (error.includes("(auth/invalid-credential)")) throw "Incorrect credentials"
-      
-      throw error
+      const error = e + "";
+      if (error.includes("(auth/network-request-failed)"))
+        throw "No internet connection";
+      if (error.includes("(auth/invalid-credential)"))
+        throw "Incorrect credentials";
+
+      throw error;
     }
   };
 
@@ -170,11 +173,9 @@ const Login = () => {
       <Text style={styles.forgotPassword}>Forgot password?</Text>
 
       {renderLoadingButton({
-        style:styles.buttonContainer,
-        children: <Text style={styles.buttonText}>
-            Login
-          </Text>,
-        onPress: onLogin
+        style: styles.buttonContainer,
+        children: <Text style={styles.buttonText}>Login</Text>,
+        onPress: onLogin,
       })}
 
       {/* </Link> */}
