@@ -240,9 +240,9 @@ const Home = () => {
       const postSnaps = isPage
         ? await collectionName("posts")
             .whereEquals("creator_is_page", true)
-            .orderBy("date")
+            .orderByDesc("date")
             .get()
-        : await collectionName("posts").orderBy("date").get();
+        : await collectionName("posts").orderByDesc("date").get();
 
       // 3️⃣ Collect shared post IDs
       const sharedIds = [
@@ -855,6 +855,19 @@ const Home = () => {
                 }}
               />
             )}
+            {hasNotif && (
+              <View
+                style={{
+                  position: "absolute",
+                  top: -1,
+                  right: 1,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 5,
+                  backgroundColor: "red",
+                }}
+              />
+            )}
           </Pressable>
           <Pressable onPress={() => router.push("/pet-owner/search")}>
             <Feather name="search" size={24} color="black" />
@@ -875,7 +888,12 @@ const Home = () => {
             placeholder="What's on your mind?"
             value={post}
             onChangeText={setPost}
-            onPress={() => router.push("/pet-owner/post")}
+            onPress={() =>
+              router.push({
+                pathname: "/pet-owner/post",
+                params: { title: "Create Post" },
+              })
+            }
             style={styles.input}
           />
         </View>
@@ -961,7 +979,10 @@ const Home = () => {
                   console.log("Edit post", selectedPostId);
                   router.push({
                     pathname: "/pet-owner/post",
-                    params: { editPost: JSON.stringify(selectedPost) },
+                    params: {
+                      editPost: JSON.stringify(selectedPost),
+                      title: "Edit Post",
+                    },
                   });
                 } else {
                   handleSavePost(selectedPostId, _unSavedId);

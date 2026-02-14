@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import MapComponent from "@/components/MapComponent";
+import { remove } from "@/helpers/db";
 import { saveItemForUser } from "@/helpers/savedItems";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -33,6 +34,8 @@ const ItemDetails = () => {
     saveCategory,
     otherUserId,
   } = useLocalSearchParams();
+
+  const idSTR = id as string;
 
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -82,6 +85,15 @@ const ItemDetails = () => {
         otherUserImgPath: sellerImage,
       },
     });
+  };
+
+  const handleDelete = () => {
+    try {
+      remove("marketPlace", idSTR);
+      router.push("/pet-owner/(tabs)/market-place");
+    } catch {
+      console.error();
+    }
   };
 
   return (
@@ -146,10 +158,22 @@ const ItemDetails = () => {
             <Text style={[styles.buttonText, { color: "#000" }]}>Save</Text>
           </Pressable>
 
-          <Pressable style={styles.Button} onPress={handleChat}>
+          {otherUserId === userId ? (
+            <Pressable style={styles.deleteBTN} onPress={handleDelete}>
+              <Ionicons name="trash" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Delete</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={styles.Button} onPress={handleChat}>
+              <Ionicons name="chatbubble" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Message</Text>
+            </Pressable>
+          )}
+
+          {/* <Pressable style={styles.Button} onPress={handleChat}>
             <Ionicons name="chatbubble" size={20} color={"#fff"} />
             <Text style={styles.buttonText}>Message</Text>
-          </Pressable>
+          </Pressable> */}
         </View>
 
         <View style={styles.devider} />
@@ -264,6 +288,16 @@ const styles = StyleSheet.create({
   Button: {
     borderRadius: 10,
     backgroundColor: Colors.primary,
+    paddingHorizontal: 50,
+    paddingVertical: 8,
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteBTN: {
+    borderRadius: 10,
+    backgroundColor: Colors.red,
     paddingHorizontal: 50,
     paddingVertical: 8,
     flexDirection: "row",
