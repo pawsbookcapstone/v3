@@ -39,6 +39,8 @@ type ImageType = {
 
 const USE_AI = false;
 
+const VISIBILITIES = ["Public", "Friends Only", "Only Me"];
+
 const PostScreen = () => {
   const [editPost, setEditPost] = useState<any>(null);
 
@@ -55,6 +57,8 @@ const PostScreen = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [violationTitle, setViolationTitle] = useState("Image");
   const [showViolationModal, setShowViolationModal] = useState(false);
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
+  const [visibility, setVisibility] = useState("Public");
   const [taggedPets, setTaggedPets] = useState<
     { id: string; name: string; img_path: string }[]
   >([]);
@@ -67,6 +71,7 @@ const PostScreen = () => {
       const post = JSON.parse(params.editPost as string);
       setEditPost(post);
       setContent(post.body || "");
+      setVisibility(post.visibility || "Public");
       // setImages(post.img_paths || []);
       setTaggedPets(post.pets || []);
 
@@ -185,6 +190,7 @@ const PostScreen = () => {
       creator_is_page: isPage,
       body: content.trim(),
       date: serverTimestamp(),
+      visibility: visibility,
       shares: 0,
     };
 
@@ -379,6 +385,14 @@ const PostScreen = () => {
 
         {/* Media Options */}
         <View style={styles.actionsColumn}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => setShowVisibilityModal(true)}
+          >
+            <FontAwesome6 name="eye" size={20} color={Colors.primary} />
+            <Text style={styles.actionText}>{visibility}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.actionBtn} onPress={pickImage}>
             <FontAwesome6 name="image" size={20} color={"#26BC00"} />
             <Text style={styles.actionText}> Gallery</Text>
@@ -441,6 +455,53 @@ const PostScreen = () => {
                 <Text style={{ color: Colors.white }}>Discard</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal transparent visible={showVisibilityModal} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text
+              style={[
+                styles.modalTitle,
+                { width: "100%", textAlign: "center", marginBottom: 10 },
+              ]}
+            >
+              Post Visibility
+            </Text>
+
+            {VISIBILITIES.map((txt, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  {
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginBottom: 8,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: Colors.black,
+                    padding: 7,
+                  },
+                  txt === visibility && { backgroundColor: Colors.black },
+                ]}
+                onPress={() => {
+                  setVisibility(txt);
+                  setShowVisibilityModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    { fontSize: 17, fontWeight: "500" },
+                    txt === visibility && { color: Colors.white },
+                  ]}
+                >
+                  {txt}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </Modal>
@@ -587,6 +648,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 15,
     borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
     flexDirection: "row",
     gap: 10,
   },

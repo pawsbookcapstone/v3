@@ -66,7 +66,7 @@ const Appointment = () => {
   //bagong code
   const onRefresh = async () => {
     setRefreshing(true);
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const snapshot = await all("appointments");
       const data = snapshot.docs.map((doc) => {
@@ -75,9 +75,7 @@ const Appointment = () => {
           id: doc.id,
           type: d.type,
           petName: d.petName,
-          date: d.selectedDate
-            ? new Date(d.selectedDate.seconds * 1000).toDateString()
-            : "",
+          date: d.selectedDate ?? "",
           time: d.selectedTime || "",
           status: d.status,
           providerId: d.providerId,
@@ -86,22 +84,22 @@ const Appointment = () => {
           location: d.location || "To be confirmed",
         };
       });
-      console.log({data});
-      
+      console.log({ data });
+
       setAppointments(data);
     } catch (error) {
       console.error("Failed to refresh appointments:", error);
     } finally {
       setRefreshing(false);
-      setIsLoading(false)
+      setIsLoading(false);
     }
   };
 
   useOnFocusHook(() => {
-    onRefresh()
+    onRefresh();
   }, []);
 
-  const filteredAppointments = appointments.filter((a:any) => {
+  const filteredAppointments = appointments.filter((a: any) => {
     const matchesSearch =
       a.petName.toLowerCase().includes(search.toLowerCase()) ||
       a.providerName.toLowerCase().includes(search.toLowerCase());
@@ -120,8 +118,8 @@ const Appointment = () => {
         cancellationReason: reason,
       });
 
-      setAppointments((prev:any) =>
-        prev.map((a:any) =>
+      setAppointments((prev: any) =>
+        prev.map((a: any) =>
           a.id === selectedAppointmentId ? { ...a, status: "Cancelled" } : a,
         ),
       );
@@ -266,7 +264,7 @@ const Appointment = () => {
             <Pressable
               style={[styles.cancelButton, ShadowStyle]}
               onPress={() => {
-                setSelectedReason(null)
+                setSelectedReason(null);
                 setSelectedAppointmentId(item.id);
                 setModalVisible(true);
               }}
@@ -426,7 +424,7 @@ const Appointment = () => {
               style={[styles.nextButton, !selectedReason && { opacity: 0.5 }]}
               disabled={!selectedReason}
               onPress={() => {
-                setModalVisible(false)
+                setModalVisible(false);
                 setConfirmVisible(true);
               }}
             >
@@ -498,8 +496,8 @@ const Appointment = () => {
                 }}
                 onPress={() => {
                   if (selectedAppointmentId && selectedReason) {
-                    setAppointments((prev:any) =>
-                      prev.map((a:any) =>
+                    setAppointments((prev: any) =>
+                      prev.map((a: any) =>
                         a.id === selectedAppointmentId
                           ? { ...a, status: "Cancelled" }
                           : a,

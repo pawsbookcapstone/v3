@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, serverTimestamp } from "@/helpers/db";
+import { add, collectionName, serverTimestamp } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -17,15 +18,16 @@ import {
 } from "react-native";
 
 const SetAppointment = () => {
-  const {userId, userName, userImagePath} = useAppContext()
+  const { userId, userName, userImagePath } = useAppContext();
 
   const [fullName, setFullName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedTime, setSelectedTime] = useState<string | null>("8:00 AM");
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false); // <-- New state
+  const [bookings, setBookings] = useState<{ [key: string]: any }>({}); // <-- New state
 
   //new code ito
   const { providerId, providerName, providerType, providerImage } =
@@ -45,6 +47,22 @@ const SetAppointment = () => {
   //   return;
   // }
 
+  useOnFocusHook(() => {
+    collectionName("appointments")
+      .whereEquals("providerId", providerId)
+      .get()
+      .then((res) => {
+        const v = res.docs.reduce((p: any, c) => {
+          const d = c.data();
+          if (!p[d.selectedDate]) p[d.selectedDate] = [];
+
+          p[d.selectedDate].push(d.selectedTime);
+          return p;
+        }, {});
+        setBookings(v);
+      });
+  }, []);
+
   const createAppointment = async () => {
     console.log(providerId, providerImage, providerName);
     if (!petName || !contactNumber || !selectedDate || !selectedTime) {
@@ -55,10 +73,11 @@ const SetAppointment = () => {
     try {
       setLoading(true);
 
-     add("appointments").value({
+      const date = selectedDate.toISOString().split("T")[0];
+      add("appointments").value({
         type: providerType,
         petName,
-        selectedDate,
+        selectedDate: date,
         selectedTime,
         status: "Upcoming",
         providerId,
@@ -68,7 +87,7 @@ const SetAppointment = () => {
         createdAt: serverTimestamp(),
         creator_id: userId,
         creator_name: userName,
-        creator_img_path: userImagePath
+        creator_img_path: userImagePath,
         // ownerId: user.uid   // add later if needed
       });
 
@@ -92,17 +111,15 @@ const SetAppointment = () => {
     });
 
   useEffect(() => {
-    if (selectedDate) {
-      const dateKey = selectedDate.toISOString().split("T")[0];
-
-      const fakeBookings: Record<string, string[]> = {
-        "2025-10-10": ["9:00 AM", "1:00 PM", "3:00 PM"],
-        "2025-10-14": ["10:00 AM", "2:00 PM"],
-      };
-
-      setBookedSlots(fakeBookings[dateKey] || []);
+    if (!selectedDate) {
+      setBookedSlots([]);
+      return;
     }
-  }, [selectedDate]);
+
+    const dateKey = selectedDate.toISOString().split("T")[0];
+
+    setBookedSlots(bookings[dateKey] || []);
+  }, [selectedDate, bookings]);
 
   const handleDateChange = (event: any, date?: Date) => {
     setShowDatePicker(false);

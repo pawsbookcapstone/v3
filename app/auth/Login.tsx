@@ -25,8 +25,8 @@ const Login = () => {
 
   // const [email, setemail] = useState(emailToSwitch ?? "");
   // const [password, setpassword] = useState("");
-  const [email, setemail] = useState(emailToSwitch ?? "email@gmail.com");
-  const [password, setpassword] = useState("PASSWORD");
+  const [email, setemail] = useState(emailToSwitch ?? "jhondoe@gmail.com");
+  const [password, setpassword] = useState("Password");
   //ad's account
   // const [email, setemail] = useState("adrianfegalan@gmail.com");
   // const [password, setpassword] = useState("PASSWORD");

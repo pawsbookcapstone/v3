@@ -1,5 +1,16 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, all, count, find, get, remove, set, update, where } from "@/helpers/db";
+import {
+  add,
+  all,
+  collectionName,
+  count,
+  find,
+  get,
+  remove,
+  set,
+  update,
+  where,
+} from "@/helpers/db";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
 import { computeTimePassed } from "@/helpers/timeConverter";
@@ -17,7 +28,7 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { limit, orderBy, serverTimestamp } from "firebase/firestore";
+import { limit, serverTimestamp } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -37,7 +48,6 @@ const Profile = () => {
   const { userToViewId } = useLocalSearchParams<{
     userToViewId: string;
   }>();
-  
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>({});
@@ -51,7 +61,7 @@ const Profile = () => {
   const [friendStatus, setFriendStatus] = useState("Unfriend");
   const [blocked, setBlocked] = useState(false);
 
-  const addNotif = useNotifHook()
+  const addNotif = useNotifHook();
 
   // useEffect(() => {
   //   const fetch = async () => {
@@ -65,7 +75,7 @@ const Profile = () => {
   //     setBlocked(bsnap.exists())
 
   //     if (data.is_page){
-        
+
   //     }
   //     else {
   //       const usnap = await find("friends", generateChatId(userId, userToViewId))
@@ -80,13 +90,13 @@ const Profile = () => {
   //             setFriendStatus("Other Request")
   //         }
   //       }
-        
+
   //       const friendsSnap = await get("friends").where(
   //         where("users", "array-contains", userToViewId),
   //         where("confirmed", "==", true),
   //         limit(6),
   //       );
-  
+
   //       const _friends = friendsSnap.docs.map((f) => {
   //         const d = f.data();
   //         const otherUserId =
@@ -98,7 +108,7 @@ const Profile = () => {
   //         };
   //       });
   //       setFriends(_friends);
-  
+
   //       if (_friends.length < 6) {
   //         setFriendsCount(_friends.length);
   //       } else {
@@ -160,17 +170,14 @@ const Profile = () => {
         /** =========================
          *  PARALLEL BASE QUERIES
          ========================== */
-        const [
-          userSnap,
-          blockSnap,
-          postsSnap,
-        ] = await Promise.all([
+        const [userSnap, blockSnap, postsSnap] = await Promise.all([
           find("users", userToViewId),
           find("users", userId, "blocked_users", userToViewId),
-          get("posts").where(
-            where("creator_id", "==", userToViewId),
-            orderBy("date", "desc")
-          ),
+          collectionName("posts")
+            .whereEquals("creator_id", userToViewId)
+            .whereNotEquals("visibility", "Only Me")
+            .orderByDesc("date")
+            .get(),
         ]);
 
         if (!mounted) return;
@@ -197,10 +204,10 @@ const Profile = () => {
           const friendsSnap = await get("friends").where(
             where("users", "array-contains", userToViewId),
             where("confirmed", "==", true),
-            limit(6)
+            limit(6),
           );
 
-          const friends = friendsSnap.docs.map(f => {
+          const friends = friendsSnap.docs.map((f) => {
             const d = f.data();
             const otherId =
               d.users[0] === userToViewId ? d.users[1] : d.users[0];
@@ -219,7 +226,7 @@ const Profile = () => {
           } else {
             const countSnap = await count("friends").where(
               where("users", "array-contains", userToViewId),
-              where("confirmed", "==", true)
+              where("confirmed", "==", true),
             );
             setFriendsCount(countSnap);
           }
@@ -229,7 +236,7 @@ const Profile = () => {
          *  POSTS OPTIMIZATION
          ========================== */
         const posts = await Promise.all(
-          postsSnap.docs.map(async dc => {
+          postsSnap.docs.map(async (dc) => {
             const d = dc.data();
 
             const [sharedSnap, commentsSnap] = await Promise.all([
@@ -247,17 +254,16 @@ const Profile = () => {
                 : false,
               showComments: false,
               shared: sharedSnap?.data() ?? null,
-              comments: commentsSnap.docs.map(c => ({
+              comments: commentsSnap.docs.map((c) => ({
                 id: c.id,
                 ...c.data(),
               })),
               date_ago: computeTimePassed(d.date.toDate()),
             };
-          })
+          }),
         );
 
         if (mounted) setPosts(posts);
-
       } catch (err) {
         console.error(err);
       } finally {
@@ -271,7 +277,6 @@ const Profile = () => {
       mounted = false;
     };
   }, []);
-
 
   const openImageModal = (images: string[], index: number) => {
     setSelectedPostImages(images);
@@ -290,7 +295,7 @@ const Profile = () => {
         if (p.id !== id) return p;
 
         const isLiking = !p.liked;
-        
+
         let liked_by_ids = [];
         if (!p.liked_by_ids) liked_by_ids = [userId];
         else {
@@ -325,17 +330,17 @@ const Profile = () => {
   };
 
   const unBlock = () => {
-    remove("users", userId, "blocked_users", userToViewId)
-    setBlocked(false)
-  }
+    remove("users", userId, "blocked_users", userToViewId);
+    setBlocked(false);
+  };
 
   const block = () => {
-    set("users", userId, "blocked_users", userToViewId).value({})
-    setBlocked(true)
-  }
+    set("users", userId, "blocked_users", userToViewId).value({});
+    setBlocked(true);
+  };
 
   const addFriend = () => {
-    const generatedId = generateChatId(userId, userToViewId)
+    const generatedId = generateChatId(userId, userToViewId);
     set("friends", generatedId).value({
       users: [userId, userToViewId],
       date_requested: serverTimestamp(),
@@ -353,22 +358,22 @@ const Profile = () => {
           img_path: userImagePath ?? "",
         },
       },
-    })
-    setFriendStatus("Your Request")
+    });
+    setFriendStatus("Your Request");
     addNotif({
       receiver_id: userToViewId,
       href: "/pet-owner/add-friend",
       type: "Sent Friend Request",
       params: {
         id: generatedId,
-      }
+      },
     });
-  }
+  };
 
   const unfriendOrCancelRequest = () => {
-    remove("friends", generateChatId(userId, userToViewId))
-    setFriendStatus("Unfriend")
-  }
+    remove("friends", generateChatId(userId, userToViewId));
+    setFriendStatus("Unfriend");
+  };
 
   const handleAddComment = (postId: string) => {
     // const text = commentInputs[postId]?.trim();
@@ -404,7 +409,7 @@ const Profile = () => {
 
     // setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
   };
-    
+
   const handleSeeProfile = (post: any) => {
     if (post.creator_id === userId) {
       router.push("/pet-owner/profile");
@@ -413,18 +418,17 @@ const Profile = () => {
 
     if (post.creator_is_page)
       router.push({
-        pathname: '/other-user/profile',
+        pathname: "/other-user/profile",
         params: {
-          pageId: post.creator_id
-        }
-      })
+          pageId: post.creator_id,
+        },
+      });
     else
       router.push({
         pathname: "/usable/user-profile",
         params: { userToViewId: post.creator_id },
       });
   };
-
 
   const renderShared = (item: any) => {
     const maxImagesToShow = 3;
@@ -461,7 +465,7 @@ const Profile = () => {
               </View>
             </View>
           </Pressable>
-          </View>
+        </View>
 
         {/* Content */}
         <Text style={styles.sharedPostContent}>{item.body}</Text>
@@ -518,16 +522,16 @@ const Profile = () => {
                 </TouchableOpacity>
               ))}
           </View>
-        )
-      }
-    </View>)
-  }
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
       <HeaderLayout noBorderRadius>
         <HeaderWithActions
-          title={`${profile.firstname ?? ''} ${profile.lastname ?? ''}`}
+          title={`${profile.firstname ?? ""} ${profile.lastname ?? ""}`}
           onBack={() => router.back()}
           onAction={() => router.push("/pet-owner/search")}
           actionIcon="search"
@@ -606,24 +610,36 @@ const Profile = () => {
 
             {/* Buttons */}
             <View style={styles.actionWrapper}>
-              {!isPage && friendStatus != "Other Request" &&
+              {!isPage && friendStatus != "Other Request" && (
                 <Pressable
                   style={[
                     styles.actionButton,
-                    { backgroundColor: friendStatus === "Your Request" ? Colors.red : (friendStatus == 'Friend' ? "#ccc" : Colors.primary) },
+                    {
+                      backgroundColor:
+                        friendStatus === "Your Request"
+                          ? Colors.red
+                          : friendStatus == "Friend"
+                            ? "#ccc"
+                            : Colors.primary,
+                    },
                   ]}
                   onPress={() => {
-                    if (friendStatus === "Friend" || friendStatus === "Your Request") {
-                      unfriendOrCancelRequest()
+                    if (
+                      friendStatus === "Friend" ||
+                      friendStatus === "Your Request"
+                    ) {
+                      unfriendOrCancelRequest();
                     } else {
-                      addFriend()
+                      addFriend();
                     }
                   }}
                 >
-                  {(friendStatus === "Friend") && (
+                  {friendStatus === "Friend" && (
                     <>
                       <FontAwesome5 name="user-times" size={17} color="black" />
-                      <Text style={[styles.actionButtonText, { color: "black" }]}>
+                      <Text
+                        style={[styles.actionButtonText, { color: "black" }]}
+                      >
                         Unfriend
                       </Text>
                     </>
@@ -631,7 +647,9 @@ const Profile = () => {
                   {friendStatus === "Unfriend" && (
                     <>
                       <FontAwesome5 name="user-plus" size={17} color="black" />
-                      <Text style={[styles.actionButtonText, { color: "black" }]}>
+                      <Text
+                        style={[styles.actionButtonText, { color: "black" }]}
+                      >
                         Add Friend
                       </Text>
                     </>
@@ -639,28 +657,32 @@ const Profile = () => {
                   {friendStatus === "Your Request" && (
                     <>
                       <FontAwesome5 name="user-plus" size={17} color="black" />
-                      <Text style={[styles.actionButtonText, { color: "black" }]}>
+                      <Text
+                        style={[styles.actionButtonText, { color: "black" }]}
+                      >
                         Cancel Request
                       </Text>
                     </>
                   )}
                 </Pressable>
-              }
+              )}
 
               <Pressable
                 style={[
                   styles.actionButton,
                   { backgroundColor: Colors.primary },
                 ]}
-                onPress={() => router.push({
-                  pathname:"/pet-owner/(chat)/chat-field",
-                  params: {
-                    otherUserId: profile.id,
-                    otherUserName: `${profile.firstname} ${profile.lastname}`,
-                    otherUserImgPath: profile.img_path,
-                    otherUserIsPage: profile.is_page
-                  }
-                })}
+                onPress={() =>
+                  router.push({
+                    pathname: "/pet-owner/(chat)/chat-field",
+                    params: {
+                      otherUserId: profile.id,
+                      otherUserName: `${profile.firstname} ${profile.lastname}`,
+                      otherUserImgPath: profile.img_path,
+                      otherUserIsPage: profile.is_page,
+                    },
+                  })
+                }
               >
                 <Ionicons name="chatbubble-sharp" size={17} color="white" />
                 <Text style={styles.actionButtonText}>Message</Text>
@@ -672,8 +694,8 @@ const Profile = () => {
                   { backgroundColor: blocked ? Colors.primary : Colors.red },
                 ]}
                 onPress={() => {
-                  if (blocked) unBlock()
-                  else block()
+                  if (blocked) unBlock();
+                  else block();
                 }}
               >
                 {blocked ? (
@@ -723,17 +745,21 @@ const Profile = () => {
 
             <View style={styles.friendGrid}>
               {friends.map((friend: any) => (
-                <Pressable key={friend.id} style={styles.friendCard} onPress={() => {
-                  if (friend.user_id === userId)
-                    router.push('/pet-owner/profile')
-                  else
-                    router.push({
-                      pathname: '/usable/user-profile',
-                      params: {
-                        userToViewId: friend.user_id
-                      }
-                    })
-                }}>
+                <Pressable
+                  key={friend.id}
+                  style={styles.friendCard}
+                  onPress={() => {
+                    if (friend.user_id === userId)
+                      router.push("/pet-owner/profile");
+                    else
+                      router.push({
+                        pathname: "/usable/user-profile",
+                        params: {
+                          userToViewId: friend.user_id,
+                        },
+                      });
+                  }}
+                >
                   <Image
                     source={{ uri: friend.img_path }}
                     style={styles.friendImage}
@@ -747,10 +773,12 @@ const Profile = () => {
 
             <Pressable
               style={styles.viewall}
-              onPress={() => router.push({
-                pathname: "/pet-owner/(friends)/my-friends",
-                params: {userToViewId}
-              })}
+              onPress={() =>
+                router.push({
+                  pathname: "/pet-owner/(friends)/my-friends",
+                  params: { userToViewId },
+                })
+              }
             >
               <Text
                 style={[
@@ -873,8 +901,8 @@ const Profile = () => {
                         ))}
                     </View>
                   )}
-                  
-                {post.shared && renderShared(post.shared)}
+
+                  {post.shared && renderShared(post.shared)}
 
                   {/* Footer */}
                   <View style={styles.postFooter}>
@@ -910,14 +938,16 @@ const Profile = () => {
                   {/* Comments */}
                   {post.showComments && (
                     <View style={styles.commentSection}>
-                      {post.comments.map((c: any, idx:number) => (
+                      {post.comments.map((c: any, idx: number) => (
                         <View key={idx} style={styles.commentRow}>
                           <Image
                             source={{ uri: c.profileImage }}
                             style={styles.commentProfile}
                           />
                           <View style={styles.commentBubble}>
-                            <Text style={styles.commentUser}>{c.commented_by_name}</Text>
+                            <Text style={styles.commentUser}>
+                              {c.commented_by_name}
+                            </Text>
                             <Text style={styles.commentText}>{c.message}</Text>
                           </View>
                         </View>
@@ -997,13 +1027,13 @@ const styles = StyleSheet.create({
   },
   sharedPostCard: {
     borderWidth: 1,
-    borderBottomWidth:0,
+    borderBottomWidth: 0,
     borderColor: Colors.lightGray,
     marginTop: 10,
     padding: 10,
     borderRadius: 10,
-    borderBottomRightRadius:0,
-    borderBottomLeftRadius:0,
+    borderBottomRightRadius: 0,
+    borderBottomLeftRadius: 0,
     width: "95%",
     alignSelf: "center",
   },

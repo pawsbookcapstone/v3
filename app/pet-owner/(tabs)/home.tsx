@@ -237,6 +237,29 @@ const Home = () => {
     setLoading(true);
 
     try {
+      const connectedIds: string[] = [];
+
+      const following = await collectionGroupName("followers")
+        .whereEquals("follower_id", userId)
+        .get();
+
+      const pageIds = following.docs.map((d) => d.ref.parent.parent?.id ?? "");
+      connectedIds.push(...pageIds);
+
+      if (!isPage) {
+        // 1️⃣ Fetch friends
+        const friendsSnap = await get("friends").where(
+          where("users", "array-contains", userId),
+          where("confirmed", "==", true),
+        );
+
+        const friendIds = friendsSnap.docs.map((d) => {
+          const { users } = d.data();
+          return users[0] === userId ? users[1] : users[0];
+        });
+        connectedIds.push(...friendIds);
+      }
+
       const postSnaps = isPage
         ? await collectionName("posts")
             .whereEquals("creator_is_page", true)
@@ -244,10 +267,23 @@ const Home = () => {
             .get()
         : await collectionName("posts").orderByDesc("date").get();
 
+      const finalPosts = postSnaps.docs.filter((v) => {
+        const d = v.data();
+
+        if (d.visibility === "Only Me" && d.creator_id !== userId) return false;
+        if (
+          d.visibility === "Friends Only" &&
+          d.creator_id !== userId &&
+          !connectedIds.some((s) => s === d.creator_id)
+        )
+          return false;
+        return true;
+      });
+
       // 3️⃣ Collect shared post IDs
       const sharedIds = [
         ...new Set(
-          postSnaps.docs.map((d) => d.data().shared_post_id).filter(Boolean),
+          finalPosts.map((d) => d.data().shared_post_id).filter(Boolean),
         ),
       ];
 
@@ -263,7 +299,7 @@ const Home = () => {
       // 5️⃣ Fetch comments in parallel
       const commentsMap: Record<string, any[]> = {};
       await Promise.all(
-        postSnaps.docs.map(async (dc: any) => {
+        finalPosts.map(async (dc: any) => {
           const commentSnap = await all("posts", dc.id, "comments");
           commentsMap[dc.id] = commentSnap.docs.map((c: any) => ({
             id: c.id,
@@ -273,7 +309,7 @@ const Home = () => {
       );
 
       // 6️⃣ Build final posts
-      const _posts = postSnaps.docs.map((dc: any) => {
+      const _posts = finalPosts.map((dc: any) => {
         const d = dc.data();
 
         return {

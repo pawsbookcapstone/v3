@@ -1,5 +1,14 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, collectionGroupName, collectionName, find, remove, serverTimestamp, set, update } from "@/helpers/db";
+import {
+  add,
+  collectionGroupName,
+  collectionName,
+  find,
+  remove,
+  serverTimestamp,
+  set,
+  update,
+} from "@/helpers/db";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -20,15 +29,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const maxImagesToShow = 3;
 
 const PageProfile = () => {
-  const {userId, isPage, userName, userImagePath} = useAppContext()
+  const { userId, isPage, userName, userImagePath } = useAppContext();
 
-  const {pageId}: {pageId: string} = useLocalSearchParams()
+  const { pageId }: { pageId: string } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(false);
   const [comment, setComment] = useState("");
@@ -40,7 +49,7 @@ const PageProfile = () => {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [followed, setFollowed] = useState(false);
-  const [profile, setProfile] = useState<any>({})
+  const [profile, setProfile] = useState<any>({});
 
   const dummyProfile = {
     id: 1,
@@ -111,7 +120,7 @@ const PageProfile = () => {
   //       setLoading(false)
   //     }
   //   }
-    
+
   //   fetch()
   // }, []);
 
@@ -120,30 +129,31 @@ const PageProfile = () => {
       setLoading(true);
 
       try {
-        if (pageId !== userId){
-          find("users", pageId, "followers", userId)
-            .then(d => {
-              setFollowed(d.exists())
-            })
+        if (pageId !== userId) {
+          find("users", pageId, "followers", userId).then((d) => {
+            setFollowed(d.exists());
+          });
         }
-        
+
         // 1️⃣ Fetch profile + counts + posts IN PARALLEL
-        const [
-          profileSnap,
-          followingCount,
-          followersCount,
-          postsSnap,
-        ] = await Promise.all([
-          find("users", pageId),
-          collectionGroupName("followers")
-            .whereEquals("follower_id", pageId)
-            .count(),
-          collectionName("users", pageId, "followers").count(),
-          collectionName("posts")
-            .whereEquals("creator_id", pageId)
-            .orderByDesc("date")
-            .get(),
-        ]);
+        const [profileSnap, followingCount, followersCount, postsSnap] =
+          await Promise.all([
+            find("users", pageId),
+            collectionGroupName("followers")
+              .whereEquals("follower_id", pageId)
+              .count(),
+            collectionName("users", pageId, "followers").count(),
+            pageId !== userId
+              ? collectionName("posts")
+                  .whereEquals("creator_id", pageId)
+                  .whereNotEquals("visibility", "Only Me")
+                  .orderByDesc("date")
+                  .get()
+              : collectionName("posts")
+                  .whereEquals("creator_id", pageId)
+                  .orderByDesc("date")
+                  .get(),
+          ]);
 
         setProfile(profileSnap.data());
         setFollowing(followingCount);
@@ -161,7 +171,7 @@ const PageProfile = () => {
           sharedIds.map(async (id) => {
             const snap = await find("posts", id);
             if (snap.exists()) sharedMap.set(id, snap.data());
-          })
+          }),
         );
 
         // 4️⃣ Fetch comments in parallel
@@ -172,7 +182,7 @@ const PageProfile = () => {
             const commentSnap = await collectionName(
               "posts",
               dc.id,
-              "comments"
+              "comments",
             ).get();
 
             return {
@@ -183,7 +193,7 @@ const PageProfile = () => {
                 : false,
               showComments: false,
               shared: d.shared_post_id
-                ? sharedMap.get(d.shared_post_id) ?? null
+                ? (sharedMap.get(d.shared_post_id) ?? null)
                 : null,
               comments: commentSnap.docs.map((c) => ({
                 id: c.id,
@@ -191,7 +201,7 @@ const PageProfile = () => {
               })),
               date_ago: computeTimePassed(d.date.toDate()),
             };
-          })
+          }),
         );
 
         setPosts(posts);
@@ -204,7 +214,6 @@ const PageProfile = () => {
 
     fetch();
   }, []);
-
 
   const toggleLike = async (id: string) => {
     console.log(id);
@@ -243,7 +252,6 @@ const PageProfile = () => {
     );
   };
 
-
   const handleAddComment = (postId: string) => {
     // const text = commentInputs[postId]?.trim();
     // if (!text) return;
@@ -276,16 +284,16 @@ const PageProfile = () => {
     setSelectedIndex(index);
     setImageModalVisible(true);
   };
-    
+
   const handleSeeProfile = (post: any) => {
-    if (pageId == post.creator_id) return
+    if (pageId == post.creator_id) return;
 
     if (post.creator_is_page) {
       router.push({
         pathname: "/other-user/profile",
         params: {
-          pageId: post.id
-        }
+          pageId: post.id,
+        },
       });
       return;
     }
@@ -295,20 +303,20 @@ const PageProfile = () => {
       params: { userToViewId: post.creator_id },
     });
   };
-  
+
   const handleFollow = () => {
-    const _followed = !followed
-    setFollowed(_followed)
-    if (_followed){
+    const _followed = !followed;
+    setFollowed(_followed);
+    if (_followed) {
       set("users", pageId, "followers", userId).value({
         follower_id: userId,
-      })
-      return
+      });
+      return;
     }
-    remove("users", pageId, "followers", userId)
-  }
+    remove("users", pageId, "followers", userId);
+  };
 
-   const renderShared = (item: any) => {
+  const renderShared = (item: any) => {
     const maxImagesToShow = 3;
     const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
 
@@ -343,7 +351,7 @@ const PageProfile = () => {
               </View>
             </View>
           </Pressable>
-          </View>
+        </View>
 
         {/* Content */}
         <Text style={styles.sharedPostContent}>{item.body}</Text>
@@ -400,16 +408,16 @@ const PageProfile = () => {
                 </TouchableOpacity>
               ))}
           </View>
-        )
-      }
-    </View>)
-  }
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={screens.screen}>
       <HeaderLayout noBorderRadius>
         <HeaderWithActions
-          title={profile.firstname ?? ''}
+          title={profile.firstname ?? ""}
           onBack={() => router.back()}
           centerTitle={true}
           onAction={() => router.push("/pet-owner/search")}
@@ -429,7 +437,7 @@ const PageProfile = () => {
           {/* --- Cover Photo --- */}
           <View style={styles.coverPhoto}>
             <Image
-              source={{ uri: profile.cover_photo_path ?? '' }}
+              source={{ uri: profile.cover_photo_path ?? "" }}
               style={styles.coverImage}
             />
           </View>
@@ -438,20 +446,16 @@ const PageProfile = () => {
           <View style={styles.profileHeader}>
             <View style={styles.profilePhoto}>
               <Image
-                source={{ uri: profile.img_path ?? '' }}
+                source={{ uri: profile.img_path ?? "" }}
                 style={styles.profileImage}
               />
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.name}>{profile.firstname}</Text>
               <Text style={styles.followers}>
-                <Text style={{ fontWeight: "bold" }}>
-                  {followers}{" "}
-                </Text>
+                <Text style={{ fontWeight: "bold" }}>{followers} </Text>
                 Followers,{" "}
-                <Text style={{ fontWeight: "bold" }}>
-                  {following}{" "}
-                </Text>
+                <Text style={{ fontWeight: "bold" }}>{following} </Text>
                 Following
               </Text>
               <Text style={styles.bio}>{profile.bio}</Text>
@@ -459,11 +463,14 @@ const PageProfile = () => {
           </View>
 
           {/* --- Action Buttons --- */}
-          {userId === pageId
-            ? <View style={styles.actionWrapper}>
+          {userId === pageId ? (
+            <View style={styles.actionWrapper}>
               <Pressable
-                style={[styles.actionButton, { backgroundColor: Colors.primary }]}
-                onPress={() => router.push('/pet-owner/edit-profile')}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: Colors.primary },
+                ]}
+                onPress={() => router.push("/pet-owner/edit-profile")}
               >
                 <MaterialIcons name="edit" size={17} color="black" />
                 <Text style={[styles.actionButtonText, { color: "black" }]}>
@@ -480,19 +487,27 @@ const PageProfile = () => {
               >
                 <Entypo name="dots-three-vertical" size={17} color="black" />
               </Pressable>
-            </View> 
-            : <View style={styles.actionWrapper}>
+            </View>
+          ) : (
+            <View style={styles.actionWrapper}>
               <Pressable
-                style={[styles.actionButton, { backgroundColor: Colors.primary }]}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: Colors.primary },
+                ]}
                 onPress={handleFollow}
               >
-                <MaterialIcons name={followed ? "remove" : "add"} size={17} color="black" />
+                <MaterialIcons
+                  name={followed ? "remove" : "add"}
+                  size={17}
+                  color="black"
+                />
                 <Text style={[styles.actionButtonText, { color: "black" }]}>
-                  {followed ? 'Unfollow' : 'Follow'}
+                  {followed ? "Unfollow" : "Follow"}
                 </Text>
               </Pressable>
             </View>
-          }
+          )}
 
           {/* --- Tabs --- */}
           <View style={styles.tabsContainer}>
@@ -584,7 +599,7 @@ const PageProfile = () => {
                     alignItems: "center",
                     marginHorizontal: 10,
                   }}
-                  onPress={() => router.push('/pet-owner/post')}
+                  onPress={() => router.push("/pet-owner/post")}
                 >
                   <View
                     style={{
@@ -644,10 +659,10 @@ const PageProfile = () => {
                         color={Colors.gray}
                       />
                     </View>
-  
+
                     {/* Content */}
                     <Text style={styles.postContent}>{post.body}</Text>
-  
+
                     {post.img_paths && post.img_paths.length > 0 && (
                       <View style={styles.imageGrid}>
                         {post.img_paths
@@ -656,7 +671,9 @@ const PageProfile = () => {
                             <TouchableOpacity
                               key={idx}
                               style={styles.imageWrapper}
-                              onPress={() => openImageModal(post.img_paths, idx)}
+                              onPress={() =>
+                                openImageModal(post.img_paths, idx)
+                              }
                               activeOpacity={0.8}
                             >
                               <Image
@@ -664,20 +681,21 @@ const PageProfile = () => {
                                 style={styles.gridImage}
                                 resizeMode="cover"
                               />
-                              {idx === maxImagesToShow - 1 && extraImages > 0 && (
-                                <View style={styles.overlay}>
-                                  <Text style={styles.overlayText}>
-                                    +{extraImages}
-                                  </Text>
-                                </View>
-                              )}
+                              {idx === maxImagesToShow - 1 &&
+                                extraImages > 0 && (
+                                  <View style={styles.overlay}>
+                                    <Text style={styles.overlayText}>
+                                      +{extraImages}
+                                    </Text>
+                                  </View>
+                                )}
                             </TouchableOpacity>
                           ))}
                       </View>
                     )}
-                    
-                  {post.shared && renderShared(post.shared)}
-  
+
+                    {post.shared && renderShared(post.shared)}
+
                     {/* Footer */}
                     <View style={styles.postFooter}>
                       <Pressable
@@ -693,7 +711,7 @@ const PageProfile = () => {
                           {(post.liked_by_ids ?? []).length}
                         </Text>
                       </Pressable>
-  
+
                       <Pressable
                         style={styles.actionBtn}
                         onPress={() => toggleComments(post.id)}
@@ -708,23 +726,27 @@ const PageProfile = () => {
                         </Text>
                       </Pressable>
                     </View>
-  
+
                     {/* Comments */}
                     {post.showComments && (
                       <View style={styles.commentSection}>
-                        {post.comments.map((c: any, idx:number) => (
+                        {post.comments.map((c: any, idx: number) => (
                           <View key={idx} style={styles.commentRow}>
                             <Image
                               source={{ uri: c.profileImage }}
                               style={styles.commentProfile}
                             />
                             <View style={styles.commentBubble}>
-                              <Text style={styles.commentUser}>{c.commented_by_name}</Text>
-                              <Text style={styles.commentText}>{c.message}</Text>
+                              <Text style={styles.commentUser}>
+                                {c.commented_by_name}
+                              </Text>
+                              <Text style={styles.commentText}>
+                                {c.message}
+                              </Text>
                             </View>
                           </View>
                         ))}
-  
+
                         <View style={styles.addCommentRow}>
                           <Image
                             source={{ uri: profile.img_path }}
@@ -762,9 +784,7 @@ const PageProfile = () => {
 
               <View style={styles.aboutRow}>
                 <MaterialIcons name="phone" size={30} color={Colors.primary} />
-                <Text style={styles.aboutText}>
-                  {profile.phone_number}
-                </Text>
+                <Text style={styles.aboutText}>{profile.phone_number}</Text>
               </View>
               <View style={styles.aboutRow}>
                 <MaterialIcons name="email" size={30} color={Colors.primary} />
@@ -831,13 +851,13 @@ const styles = StyleSheet.create({
   },
   sharedPostCard: {
     borderWidth: 1,
-    borderBottomWidth:0,
+    borderBottomWidth: 0,
     borderColor: Colors.lightGray,
     marginTop: 10,
     padding: 10,
     borderRadius: 10,
-    borderBottomRightRadius:0,
-    borderBottomLeftRadius:0,
+    borderBottomRightRadius: 0,
+    borderBottomLeftRadius: 0,
     width: "95%",
     alignSelf: "center",
   },

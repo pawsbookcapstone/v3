@@ -79,7 +79,7 @@ const dummyAppointments: Appointment[] = [
 const tabs = ["All", "Upcoming", "Completed", "Cancelled"];
 
 const Appointment = () => {
-  const {userId} = useAppContext()
+  const { userId } = useAppContext();
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -95,23 +95,23 @@ const Appointment = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     setIsLoading(true);
-    
-    try{
+
+    try {
       const _appointments = await collectionName("appointments")
         .whereEquals("providerId", userId)
-        .getMapped()
-      setAppointments(_appointments)
-    } finally{
+        .getMapped();
+      setAppointments(_appointments);
+    } finally {
       setRefreshing(false);
       setIsLoading(false);
     }
   };
 
   useOnFocusHook(() => {
-    onRefresh()
+    onRefresh();
   }, []);
 
-  const filteredAppointments = appointments.filter((a:any) => {
+  const filteredAppointments = appointments.filter((a: any) => {
     const matchesSearch =
       a.creator_name.toLowerCase().includes(search.toLowerCase()) ||
       a.petName.toLowerCase().includes(search.toLowerCase());
@@ -123,32 +123,30 @@ const Appointment = () => {
 
   const handleConfirmDecline = (reason?: string) => {
     if (selectedAppointmentId) {
-      setAppointments((prev:any) =>
-        prev.map((a:any) =>
-          a.id === selectedAppointmentId ? { ...a, status: "Cancelled" } : a
-        )
+      setAppointments((prev: any) =>
+        prev.map((a: any) =>
+          a.id === selectedAppointmentId ? { ...a, status: "Cancelled" } : a,
+        ),
       );
 
       update("appointments", selectedAppointmentId).value({
-        status: "Cancelled"
-      })
+        status: "Cancelled",
+      });
       setSelectedAppointmentId(null);
       setModalVisible(false);
       console.log("Cancelled for reason:", reason || "No reason provided");
     }
   };
 
-  const handleConfirm = (id:string) => {
-    setAppointments((prev:any) =>
-      prev.map((a:any) =>
-        a.id === id ? { ...a, status: "Completed" } : a
-      )
+  const handleConfirm = (id: string) => {
+    setAppointments((prev: any) =>
+      prev.map((a: any) => (a.id === id ? { ...a, status: "Completed" } : a)),
     );
 
     update("appointments", id).value({
-      status: "Completed"
-    })
-  }
+      status: "Completed",
+    });
+  };
 
   const renderItem = ({ item }: { item: any }) => (
     <Pressable
@@ -159,7 +157,7 @@ const Appointment = () => {
             id: item.id,
             type: item.type,
             name: item.providerName,
-            date: item.selectedDate.toDate().toDateString(),
+            date: item.selectedDate,
             time: item.selectedTime,
             status: item.status,
             petName: item.petName,
@@ -180,8 +178,8 @@ const Appointment = () => {
               item.status === "Upcoming"
                 ? { backgroundColor: "#E0F2FF" }
                 : item.status === "Completed"
-                ? { backgroundColor: "#E6FFED" }
-                : { backgroundColor: "#FFE6E6" },
+                  ? { backgroundColor: "#E6FFED" }
+                  : { backgroundColor: "#FFE6E6" },
             ]}
           >
             <Text
@@ -190,8 +188,8 @@ const Appointment = () => {
                 item.status === "Upcoming"
                   ? { color: Colors.primary }
                   : item.status === "Completed"
-                  ? { color: "green" }
-                  : { color: "red" },
+                    ? { color: "green" }
+                    : { color: "red" },
               ]}
             >
               {item.status}
@@ -246,7 +244,7 @@ const Appointment = () => {
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.location}>
-                {item.selectedDate.toDate().toDateString()} at {item.selectedTime}
+                {item.selectedDate} at {item.selectedTime}
               </Text>
             </View>
           </View>
