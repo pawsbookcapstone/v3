@@ -21,7 +21,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const AddPet = () => {
@@ -52,20 +52,209 @@ const AddPet = () => {
   const speciesAnim = useRef(new Animated.Value(400)).current;
   const breedAnim = useRef(new Animated.Value(400)).current;
 
-  const speciesOptions = ["Dog", "Cat", "Bird", "Rabbit"];
+  const speciesOptions = [
+    "Dog",
+    "Cat",
+    "Bird",
+    "Rabbit",
+    "Hamster",
+    "Guinea Pig",
+    "Fish",
+    "Turtle",
+    "Spider",
+    "Ferret",
+    "Goat",
+    "Pig",
+    "Chicken",
+    "Duck",
+    "Horse",
+    "Cow",
+    "Sheep",
+    "Llama",
+    "Alpaca",
+    "Hedgehog",
+    "Chinchilla",
+    "Gerbil",
+    "Gecko",
+    "Snake",
+    "Others",
+  ];
+
   const breedOptions: Record<string, string[]> = {
-    Dog: ["Labrador", "German Shepherd", "Bulldog", "Poodle"],
-    Cat: ["Persian", "Siamese", "Maine Coon", "Bengal"],
-    Bird: ["Parrot", "Canary", "Finch"],
-    Rabbit: ["Holland Lop", "Lionhead", "Mini Rex"],
+    Dog: [
+      "Labrador",
+      "German Shepherd",
+      "Bulldog",
+      "Poodle",
+      "Golden Retriever",
+      "Beagle",
+      "Rottweiler",
+      "Shih Tzu",
+      "Chihuahua",
+      "Dachshund",
+      "Siberian Husky",
+      "Boxer",
+      "Border Collie",
+      "Great Dane",
+      "Doberman",
+      "Corgi",
+      "Akita",
+      "Maltese",
+      "Saint Bernard",
+    ],
+
+    Cat: [
+      "Persian",
+      "Siamese",
+      "Maine Coon",
+      "Bengal",
+      "Ragdoll",
+      "British Shorthair",
+      "Sphynx",
+      "Abyssinian",
+      "Scottish Fold",
+      "Russian Blue",
+      "American Shorthair",
+      "Norwegian Forest Cat",
+      "Birman",
+      "Oriental Shorthair",
+    ],
+
+    Bird: [
+      "Parrot",
+      "Canary",
+      "Finch",
+      "Budgerigar (Budgie)",
+      "Cockatiel",
+      "Lovebird",
+      "Macaw",
+      "Cockatoo",
+      "African Grey",
+      "Dove",
+      "Pigeon",
+      "Quaker Parrot",
+    ],
+
+    Rabbit: [
+      "Holland Lop",
+      "Lionhead",
+      "Mini Rex",
+      "Netherland Dwarf",
+      "Flemish Giant",
+      "English Angora",
+      "Dutch Rabbit",
+      "Californian",
+      "Harlequin",
+    ],
+
+    Hamster: [
+      "Syrian",
+      "Dwarf Campbell",
+      "Dwarf Winter White",
+      "Roborovski",
+      "Chinese Hamster",
+    ],
+
+    GuineaPig: [
+      "American",
+      "Abyssinian",
+      "Peruvian",
+      "Silkie",
+      "Teddy",
+      "Texel",
+      "Coronet",
+    ],
+
+    Fish: [
+      "Goldfish",
+      "Betta",
+      "Guppy",
+      "Angelfish",
+      "Molly",
+      "Platy",
+      "Tetra",
+      "Koi",
+      "Cichlid",
+      "Discus",
+      "Swordtail",
+    ],
+
+    Turtle: [
+      "Red-Eared Slider",
+      "Painted Turtle",
+      "Box Turtle",
+      "Musk Turtle",
+      "Map Turtle",
+    ],
+    Spider: [
+      "Tarantula (Chilean Rose)",
+      "Tarantula (Mexican Red Knee)",
+      "Tarantula (Brazilian Black)",
+      "Tarantula (Pink Toe)",
+      "Jumping Spider",
+      "Wolf Spider (Captive Kept)",
+    ],
+
+    Ferret: ["Standard Ferret"],
+
+    Goat: [
+      "Pygmy Goat",
+      "Nigerian Dwarf",
+      "Boer Goat",
+      "Angora Goat",
+      "Saanen",
+      "Alpine",
+    ],
+
+    Pig: ["Mini Pig", "Potbelly Pig", "Juliana Pig", "Kunekune"],
+
+    Chicken: [
+      "Silkie",
+      "Leghorn",
+      "Rhode Island Red",
+      "Plymouth Rock",
+      "Brahma",
+      "Orpington",
+      "Sussex",
+    ],
+
+    Duck: ["Pekin", "Muscovy", "Khaki Campbell", "Indian Runner", "Mallard"],
+
+    Horse: [
+      "Arabian",
+      "Thoroughbred",
+      "Quarter Horse",
+      "Appaloosa",
+      "Clydesdale",
+      "Shetland Pony",
+      "Friesian",
+    ],
+
+    Cow: ["Holstein", "Jersey", "Angus", "Hereford", "Brahman"],
+
+    Sheep: ["Merino", "Suffolk", "Dorper", "Hampshire", "Dorset"],
+
+    Llama: ["Classic Llama", "Wooly Llama"],
+
+    Alpaca: ["Huacaya", "Suri"],
+
+    Hedgehog: ["African Pygmy Hedgehog"],
+
+    Chinchilla: ["Standard Grey", "White Mosaic", "Black Velvet", "Beige"],
+
+    Gerbil: ["Mongolian Gerbil"],
+
+    Gecko: ["Leopard Gecko", "Crested Gecko"],
+
+    Snake: ["Corn Snake", "Ball Python", "King Snake", "Milk Snake"],
   };
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   // Animations for modals
   const openModal = (
     setter: React.Dispatch<React.SetStateAction<boolean>>,
-    anim: Animated.Value
+    anim: Animated.Value,
   ) => {
     setter(true);
     setTimeout(() => {
@@ -80,7 +269,7 @@ const AddPet = () => {
 
   const closeModal = (
     setter: React.Dispatch<React.SetStateAction<boolean>>,
-    anim: Animated.Value
+    anim: Animated.Value,
   ) => {
     Animated.timing(anim, {
       toValue: 400,
@@ -130,16 +319,17 @@ const AddPet = () => {
   };
 
   const handleSave = async () => {
-    if (!name || !species || !breed || !gender || !profileImage) throw "Please fill all fields!!!"
+    if (!name || !species || !breed || !gender || !profileImage)
+      throw "Please fill all fields!!!";
 
     let data: any = {};
     if (hasVaccine) {
       const _vaccines = vaccines.filter(
-        (vaccine) => vaccine.name && vaccine.date
+        (vaccine) => vaccine.name && vaccine.date,
       );
       if (_vaccines.length == 0)
         throw "Please provide vaccine name and date!!!";
-        
+
       data.vaccines = _vaccines;
     }
 
@@ -156,7 +346,7 @@ const AddPet = () => {
       gender: gender,
       ...data,
     });
-    router.back()
+    router.back();
   };
 
   return (
@@ -214,14 +404,26 @@ const AddPet = () => {
 
         {/* Breed Dropdown */}
         <Text style={styles.label}>Breed</Text>
-        <TouchableOpacity
-          style={[styles.inputContainer, { height: 65 }]}
-          onPress={() => openModal(setBreedModal, breedAnim)}
-          disabled={!species}
-        >
-          <FontAwesome5 name="bone" size={18} color={Colors.primary} />
-          <Text style={styles.dropdownText}>{breed || "Select Breed"}</Text>
-        </TouchableOpacity>
+        {species === "Others" ? (
+          <View style={styles.inputContainer}>
+            <FontAwesome5 name="bone" size={18} color={Colors.primary} />
+            <TextInput
+              value={breed}
+              onChangeText={setBreed}
+              placeholder="Select Breed"
+              style={styles.input}
+            />
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.inputContainer, { height: 65 }]}
+            onPress={() => openModal(setBreedModal, breedAnim)}
+            disabled={!species}
+          >
+            <FontAwesome5 name="bone" size={18} color={Colors.primary} />
+            <Text style={styles.dropdownText}>{breed || "Select Breed"}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Age */}
         <Text style={styles.label}>Age</Text>
@@ -336,6 +538,7 @@ const AddPet = () => {
       </ScrollView>
 
       {/* -------- Species Modal -------- */}
+
       <Modal visible={speciesModal} transparent animationType="none">
         <View style={styles.modalOverlay}>
           <Animated.View
@@ -353,19 +556,24 @@ const AddPet = () => {
               </TouchableOpacity>
             </View>
 
-            {speciesOptions.map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={styles.modalItem}
-                onPress={() => {
-                  setSpecies(item);
-                  setBreed("");
-                  closeModal(setSpeciesModal, speciesAnim);
-                }}
-              >
-                <Text>{item}</Text>
-              </TouchableOpacity>
-            ))}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
+              {speciesOptions.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSpecies(item);
+                    setBreed("");
+                    closeModal(setSpeciesModal, speciesAnim);
+                  }}
+                >
+                  <Text>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </Animated.View>
         </View>
       </Modal>
@@ -416,13 +624,11 @@ const AddPet = () => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        {
-          renderLoadingButton({
-            style: styles.saveBtn,
-            children: <Text style={styles.saveBtnText}>Save</Text>,
-            onPress: handleSave
-          })
-        }
+        {renderLoadingButton({
+          style: styles.saveBtn,
+          children: <Text style={styles.saveBtnText}>Save</Text>,
+          onPress: handleSave,
+        })}
         {/* <TouchableOpacity style={styles.saveBtn} onPressIn={handleSave}>
           <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity> */}
