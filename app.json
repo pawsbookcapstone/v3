@@ -15,6 +15,10 @@
         "googleMapsApiKey": "AIzaSyC8tPLuD2VN7-YfUm5ockJmDRt4aQ0J5rA"
       }
     },
+    "notification": {
+      "icon": "./assets/Icons/icon.png",
+      "color": "#ffffff"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

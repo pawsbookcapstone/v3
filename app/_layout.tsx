@@ -39,7 +39,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (appReady) {
-      router.replace("/auth/Login");
+      router.replace("/StartScreen");
       // router.replace("/pet-owner/(tabs)/home");
     }
   }, [appReady]);
