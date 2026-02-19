@@ -1,5 +1,13 @@
 import { useAppContext } from "@/AppsProvider";
-import { all, get, remove, serverTimestamp, set, update } from "@/helpers/db";
+import {
+  add,
+  all,
+  get,
+  remove,
+  serverTimestamp,
+  set,
+  update,
+} from "@/helpers/db";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -31,6 +39,7 @@ const myProfileImage = "https://randomuser.me/api/portraits/men/32.jpg";
 
 interface Comment {
   id: string;
+  postId: string;
   user: string;
   text: string;
   profileImage: string;
@@ -48,6 +57,7 @@ interface Post {
   comments: Comment[];
   showComments: boolean;
   newComment: string;
+  userId: string;
 }
 
 interface Group {
@@ -58,6 +68,16 @@ interface Group {
   privacy: "Private" | "Public";
   description?: string;
   // questions: string[];
+}
+
+interface PostDropdownProps {
+  postId: string;
+  x: number;
+  y: number;
+  isMyPost: boolean;
+  onClose: () => void;
+  onSave: (postId: string) => void;
+  onReport: (postId: string) => void;
 }
 
 export default function GroupProfile() {
@@ -74,6 +94,12 @@ export default function GroupProfile() {
   const [answers, setAnswers] = useState(["", "", ""]);
 
   const [pageDetails, setPageDetails] = useState<Group | null>(null);
+  const [comments, setComments] = useState<Record<string, Comment[]>>({});
+   const [showDropdown, setShowDropdown] = useState(false);
+     const [selectedPostId, setSelectedPostId] = React.useState<string | null>(
+       null,
+     );
+     
 
   let membershipQuestions: string[] = [];
 
@@ -110,18 +136,48 @@ export default function GroupProfile() {
     // },
   ]);
 
-  useOnFocusHook(() => {
-    const fetchPosts = async () => {
-      try {
-        const postsData = await all("groups", groupId, "posts");
-        const items = postsData.docs.map((doc) => {
-          const data = doc.data();
+  const formatTimeAgo = (date?: Date) => {
+    if (!date) return "";
 
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+    const intervals: { [key: string]: number } = {
+      year: 31536000,
+      month: 2592000,
+      week: 604800,
+      day: 86400,
+      hour: 3600,
+      minute: 60,
+      second: 1,
+    };
+
+    for (const key in intervals) {
+      const interval = intervals[key];
+      if (seconds >= interval) {
+        const count = Math.floor(seconds / interval);
+        return `${count} ${key}${count > 1 ? "s" : ""} ago`;
+      }
+    }
+    return "just now";
+  };
+
+  useOnFocusHook(() => {
+   
+
+    fetchAll();
+  }, []);
+
+   const fetchAll = async () => {
+      try {
+        // 1️⃣ Fetch posts
+        const postsData = await all("groups", groupId, "posts");
+        const finalPosts = postsData.docs.map((doc) => {
+          const data = doc.data();
           return {
             id: doc.id,
             user: data.user,
             profileImage: data.profileImage,
-            time: data.createdAt?.toDate().toLocaleString() ?? "",
+            time: formatTimeAgo(data.time?.toDate()),
             content: data.content,
             images: data.images || null,
             likes: data.likes || 0,
@@ -129,48 +185,78 @@ export default function GroupProfile() {
             comments: data.comments || [],
             showComments: false,
             newComment: data.newComment || "",
+            userId: data.userId,
           };
         });
-        setPosts(items);
-        // console.log("Fetched posts:", items);
+
+        setPosts(finalPosts);
+        console.log(posts);
+
+        // 2️⃣ Fetch comments after posts are loaded
+        const commentsMap: Record<string, Comment[]> = {};
+        await Promise.all(
+          finalPosts.map(async (post) => {
+            try {
+              const commentSnap = await all(
+                "groups",
+                groupId,
+                "posts",
+                post.id,
+                "comments",
+              );
+
+              commentsMap[post.id] = commentSnap.docs.map((c: any) => ({
+                id: c.id || `${Date.now()}-${Math.random()}`,
+                ...c.data(),
+              }));
+            } catch (error) {
+              console.log(
+                `Error fetching comments for post ${post.id}:`,
+                error,
+              );
+              commentsMap[post.id] = [];
+            }
+          }),
+        );
+
+        setComments(commentsMap);
+        // console.log("Fetched comments map:", commentsMap);
+
+        const [groupsSnap, joinSnap] = await Promise.all([
+          get("groups").where(where(documentId(), "==", groupId)),
+          get("groups", groupId, "join-request").where(
+            where(documentId(), "==", userId),
+          ),
+        ]);
+        setPageDetails(groupsSnap.docs[0].data() as Group);
+        setJoinRequestSent(!joinSnap.empty);
       } catch (error) {
-        console.error("Error fetching posts:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
-    const fetchPageDetails = async () => {
-      const groups = await get("groups").where(
-        where(documentId(), "==", groupId),
-      );
-      setPageDetails(groups.docs[0].data() as Group);
-    };
-
-    //check join request status
-
-    const fetchJoinStatus = async () => {
-      const groups = await get("groups", groupId, "join-request").where(
-        where(documentId(), "==", userId),
-      );
-      setJoinRequestSent(!groups.empty);
-    };
-
-    fetchPageDetails();
-    fetchJoinStatus();
-    fetchPosts();
-  }, []);
-
-  // ❤️ Like toggle
   const toggleLike = (postId: string) => {
     setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              liked: !post.liked,
-              likes: post.liked ? post.likes - 1 : post.likes + 1,
-            }
-          : post,
-      ),
+      prev.map((post) => {
+        if (post.id === postId) {
+          const newLiked = !post.liked;
+          const newLikes = newLiked ? post.likes + 1 : post.likes - 1;
+
+          // Update Firestore using your helper
+          update("groups", groupId, "posts", postId).value({
+            liked: newLiked,
+            likes: newLikes,
+          });
+
+          // Return updated local state
+          return {
+            ...post,
+            liked: newLiked,
+            likes: newLikes,
+          };
+        }
+        return post;
+      }),
     );
   };
 
@@ -186,24 +272,65 @@ export default function GroupProfile() {
   };
 
   // 📝 Add new comment
+  // const handleAddComment = async (postId: string) => {
+  //   setPosts((prev) =>
+  //     prev.map((post) => {
+  //       if (post.id === postId && post.newComment.trim()) {
+  //         const newComment: Comment = {
+  //           postId: postId,
+  //           user: userName,
+  //           text: post.newComment,
+  //           profileImage: userImagePath,
+  //         };
+  //            add("groups", groupId, "posts",postId,"comments").value(newComment);
+  //         return {
+  //           ...post,
+  //           comments: [...post.comments, newComment],
+  //           newComment: "",
+  //         };
+  //       }
+  //       return post;
+  //     }),
+  //   );
+  // };
+
   const handleAddComment = async (postId: string) => {
+    // 1️⃣ Find the post
+    const postToUpdate = posts.find((p) => p.id === postId);
+    if (!postToUpdate || !postToUpdate.newComment.trim()) return;
+
+    // 2️⃣ Add comment to Firestore (or your helper)
+    const newCommentData = {
+      user: userName,
+      text: postToUpdate.newComment,
+      profileImage: userImagePath,
+      postId,
+    };
+
+    const docRef = await add(
+      "groups",
+      groupId,
+      "posts",
+      postId,
+      "comments",
+    ).value(newCommentData);
+
+    const newComment: Comment = {
+      id: docRef?.id || `${Date.now()}-${Math.floor(Math.random() * 10000)}`, // unique ID
+      ...newCommentData,
+    };
+
+    // 3️⃣ Update state
     setPosts((prev) =>
-      prev.map((post) => {
-        if (post.id === postId && post.newComment.trim()) {
-          const newComment: Comment = {
-            id: Date.now().toString(),
-            user: "You",
-            text: post.newComment,
-            profileImage: userImagePath,
-          };
-          return {
-            ...post,
-            comments: [...post.comments, newComment],
-            newComment: "",
-          };
-        }
-        return post;
-      }),
+      prev.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: [...post.comments, newComment],
+              newComment: "",
+            }
+          : post,
+      ),
     );
   };
 
@@ -326,13 +453,46 @@ export default function GroupProfile() {
     // if (!groupName.trim()) return;
   };
 
+
+
+// const PostDropdown = ({ postId, x, y, isMyPost, onClose, onSave, onReport }: PostDropdownProps) => {
+//   return (
+//     <Pressable style={styles.overlay} onPress={onClose}>
+//       <View style={[styles.dropdown, { top: y, left: x }]}>
+//         {isMyPost && (
+//           <Pressable style={styles.dropdownItem} onPress={() => onSave(postId)}>
+//             <Text style={styles.dropdownText}>Edit Post</Text>
+//           </Pressable>
+//         )}
+//         <Pressable style={styles.dropdownItem} onPress={() => onReport(postId)}>
+//           <Text style={[styles.dropdownText, { color: isMyPost ? "red" : "black" }]}>
+//             {isMyPost ? "Delete Post" : "Report Post"}
+//           </Text>
+//         </Pressable>
+//       </View>
+//     </Pressable>
+//   );
+// };
+
+const showDelete = (postID:any) => {
+ setShowDropdown(true)
+ setSelectedPostId(postID)
+}
+
+const deletePost = async(postID:any) => {
+remove("groups", groupId, "posts", postID);
+fetchAll()
+ setShowDropdown(false)
+}
+
   return (
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
       <HeaderLayout noBorderRadius bottomBorder>
         <HeaderWithActions
           title={title as string}
           onBack={() => {
-            router.push("/pet-owner/(menu)/community");
+            // router.push("/pet-owner/(menu)/community");
+            router.back()
           }}
           centerTitle
         />
@@ -451,161 +611,153 @@ export default function GroupProfile() {
               const extraImages = postImages.length - maxImagesToShow;
 
               return (
-                <View style={styles.postsSection}>
-                  {posts.map((post, idx) => {
-                    const postImages = post.images ?? [];
-
-                    const maxImagesToShow = 3;
-                    const extraImages = postImages.length - maxImagesToShow;
-
-                    return (
-                      <View key={idx} style={styles.postCard}>
-                        {/* Header */}
-                        <View style={styles.postHeader}>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              flex: 1,
-                            }}
-                          >
-                            <Image
-                              source={{ uri: post.profileImage }}
-                              style={styles.profileImage}
-                            />
-                            <View style={{ marginLeft: 8 }}>
-                              <Text style={styles.userName}>{post.user}</Text>
-                              <Text style={styles.postTime}>{post.time}</Text>
-                            </View>
-                          </View>
-
-                          <Entypo
-                            name="dots-three-horizontal"
-                            size={18}
-                            color="#555"
-                            style={{ marginRight: 5 }}
-                          />
-                        </View>
-
-                        {/* Content */}
-                        {post.content ? (
-                          <Text style={styles.postContent}>{post.content}</Text>
-                        ) : null}
-
-                        {/* Image Grid */}
-                        {postImages.length > 0 && (
-                          <View style={styles.imageGrid}>
-                            {postImages
-                              .slice(0, maxImagesToShow)
-                              .map((img, idx) => (
-                                <Pressable
-                                  key={idx}
-                                  style={styles.imageWrapper}
-                                  onPress={() => {
-                                    setSelectedPostImages(postImages);
-                                    setSelectedIndex(idx);
-                                    setImageModalVisible(true);
-                                  }}
-                                >
-                                  <Image
-                                    source={{ uri: img }}
-                                    style={styles.gridImage}
-                                  />
-                                  {idx === maxImagesToShow - 1 &&
-                                    extraImages > 0 && (
-                                      <View style={styles.overlay}>
-                                        <Text style={styles.overlayText}>
-                                          +{extraImages}
-                                        </Text>
-                                      </View>
-                                    )}
-                                </Pressable>
-                              ))}
-                          </View>
-                        )}
-
-                        {/* Actions */}
-                        <View style={styles.actionsRow}>
-                          <Pressable
-                            onPress={() => toggleLike(post.id)}
-                            style={styles.actionBtn}
-                          >
-                            <Ionicons
-                              name={
-                                post.liked ? "heart-sharp" : "heart-outline"
-                              }
-                              size={23}
-                              color={post.liked ? "red" : "black"}
-                            />
-                            <Text style={styles.countText}>{post.likes}</Text>
-                          </Pressable>
-
-                          <Pressable
-                            onPress={() => toggleComments(post.id)}
-                            style={styles.actionBtn}
-                          >
-                            <Ionicons
-                              name="chatbubble-outline"
-                              size={20}
-                              color="black"
-                            />
-                            <Text style={styles.countText}>
-                              {post.comments.length}
-                            </Text>
-                          </Pressable>
-                        </View>
-
-                        {/* Comments */}
-                        {post.showComments && (
-                          <View style={styles.commentSection}>
-                            {post.comments.map((comment) => (
-                              <View key={comment.id} style={styles.commentRow}>
-                                <Image
-                                  source={{ uri: comment.profileImage }}
-                                  style={styles.commentProfile}
-                                />
-                                <View style={styles.commentBubble}>
-                                  <Text style={styles.commentUser}>
-                                    {comment.user}
-                                  </Text>
-                                  <Text style={styles.commentText}>
-                                    {comment.text}
-                                  </Text>
-                                </View>
-                              </View>
-                            ))}
-
-                            {/* Add comment */}
-                            <View style={styles.addCommentRow}>
-                              <Image
-                                source={{ uri: userImagePath }}
-                                style={styles.commentProfile}
-                              />
-                              <TextInput
-                                placeholder="Write a comment..."
-                                style={styles.commentInput}
-                                value={post.newComment}
-                                onChangeText={(text) =>
-                                  setPosts((prev) =>
-                                    prev.map((p) =>
-                                      p.id === post.id
-                                        ? { ...p, newComment: text }
-                                        : p,
-                                    ),
-                                  )
-                                }
-                              />
-                              <Pressable
-                                onPress={() => handleAddComment(post.id)}
-                              >
-                                <Text style={styles.postCommentBtn}>Post</Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        )}
+                <View key={post.id} style={styles.postCard}>
+                  {/* Header */}
+                  <View style={styles.postHeader}>
+                    <Pressable
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        flex: 1,
+                      }}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/usable/user-profile",
+                          params: {
+                            userToViewId: post.userId,
+                          },
+                        })
+                      }
+                    >
+                      <Image
+                        source={{ uri: post.profileImage }}
+                        style={styles.profileImage}
+                      />
+                      <View style={{ marginLeft: 8 }}>
+                        <Text style={styles.userName}>{post.user}</Text>
+                        <Text style={styles.postTime}>{post.time}</Text>
                       </View>
-                    );
-                  })}
+                    </Pressable>
+                    {post.userId === userId? (  <Entypo
+                      name="dots-three-horizontal"
+                      size={18}
+                      color="#555"
+                      style={{ marginRight: 5 }}
+                      onPress={() => showDelete(post.id)}
+                    />): null}
+                  
+                  </View>
+
+                  {/* Content */}
+                  {post.content && (
+                    <Text style={styles.postContent}>{post.content}</Text>
+                  )}
+
+                  {/* Image Grid */}
+                  {postImages.length > 0 && (
+                    <View style={styles.imageGrid}>
+                      {postImages.slice(0, maxImagesToShow).map((img, idx) => (
+                        <Pressable
+                          key={idx}
+                          style={styles.imageWrapper}
+                          onPress={() => {
+                            setSelectedPostImages(postImages);
+                            setSelectedIndex(idx);
+                            setImageModalVisible(true);
+                          }}
+                        >
+                          <Image
+                            source={{ uri: img }}
+                            style={styles.gridImage}
+                          />
+                          {idx === maxImagesToShow - 1 && extraImages > 0 && (
+                            <View style={styles.overlay}>
+                              <Text style={styles.overlayText}>
+                                +{extraImages}
+                              </Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Actions */}
+                  <View style={styles.actionsRow}>
+                    <Pressable
+                      onPress={() => toggleLike(post.id)}
+                      style={styles.actionBtn}
+                    >
+                      <Ionicons
+                        name={post.liked ? "heart-sharp" : "heart-outline"}
+                        size={23}
+                        color={post.liked ? "red" : "black"}
+                      />
+                      <Text style={styles.countText}>{post.likes}</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => toggleComments(post.id)}
+                      style={styles.actionBtn}
+                    >
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={20}
+                        color="black"
+                      />
+                      <Text style={styles.countText}>
+                        {" "}
+                        {comments[post.id]?.length || 0}
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Comments */}
+                  {post.showComments && (
+                    <View style={styles.commentSection}>
+                      {(comments[post.id] || []).map((comment) => (
+                        <View key={comment.postId} style={styles.commentRow}>
+                          <Image
+                            source={{ uri: comment.profileImage }}
+                            style={styles.commentProfile}
+                          />
+                          <View style={styles.commentBubble}>
+                            <Text style={styles.commentUser}>
+                              {comment.user}
+                            </Text>
+                            <Text style={styles.commentText}>
+                              {comment.text}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+
+                      {/* Add comment */}
+                      <View style={styles.addCommentRow}>
+                        <Image
+                          source={{ uri: userImagePath }}
+                          style={styles.commentProfile}
+                        />
+                        <TextInput
+                          placeholder="Write a comment..."
+                          style={styles.commentInput}
+                          value={post.newComment}
+                          onChangeText={(text) =>
+                            setPosts((prev) =>
+                              prev.map((p) =>
+                                p.id === post.id
+                                  ? { ...p, newComment: text }
+                                  : p,
+                              ),
+                            )
+                          }
+                        />
+                        <Pressable onPress={() => handleAddComment(post.id)}>
+                          <Text style={styles.postCommentBtn}>Post</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })}
@@ -697,6 +849,33 @@ export default function GroupProfile() {
           </View>
         </View>
       </Modal>
+
+
+   {/* Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showDropdown}
+        onRequestClose={() => setShowDropdown(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowDropdown(false)}
+        >
+          <View style={styles.modalContent}>
+            <Pressable
+              style={styles.deleteBtn}
+              onPress={() => {
+                deletePost(selectedPostId)
+                setShowDropdown(false); // close modal
+              }}
+            >
+              <Text style={styles.deleteText}>Delete</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+      
 
       {imageModalVisible && (
         <Modal visible={imageModalVisible} transparent={true}>
@@ -965,5 +1144,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
+  },
+  //   modalOverlay: {
+  //   flex: 1,
+  //   backgroundColor: "rgba(0,0,0,0.3)",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  // },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: 200,
+    alignItems: "center",
+  },
+  deleteBtn: {
+    paddingVertical: 10,
+    width: "100%",
+    alignItems: "center",
+  },
+  deleteText: {
+    color: "red",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+
+
+  overlayDleteBTN: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  dropdown: {
+    position: "absolute",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingVertical: 5,
+    width: 140,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
   },
 });
