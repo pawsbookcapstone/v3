@@ -149,6 +149,19 @@ export async function updateUserProfile(
     );
   });
 
+  const groupPostSnap = await getDocs(
+    query(collectionGroup(db, "group-posts"), where("userId", "==", userId)),
+  );
+
+  groupPostSnap.forEach((docSnap) => {
+    ops.push((batch) =>
+      batch.update(docSnap.ref, {
+        user: newName,
+        profileImage: newImage,
+      }),
+    );
+  });
+
   const notifSnap = await getDocs(
     query(collection(db, "notifications"), where("sender_id", "==", userId)),
   );
@@ -172,6 +185,20 @@ export async function updateUserProfile(
       batch.update(docSnap.ref, {
         creator_name: newName,
         creator_img_path: newImage,
+      }),
+    );
+  });
+
+
+ const groupCommentSnap = await getDocs(
+    query(collectionGroup(db, "group-comments"), where("userId", "==", userId)),
+  );
+
+  groupCommentSnap.forEach((docSnap) => {
+    ops.push((batch) =>
+      batch.update(docSnap.ref, {
+        user: newName,
+        profileImage: newImage,
       }),
     );
   });

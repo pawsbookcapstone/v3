@@ -65,7 +65,7 @@ const AnonymousPosting = () => {
     }
 
     try {
-      add("groups", groupId, "posts").value({
+      add("groups", groupId, "group-posts").value({
         // id: Date.now().toString(),
         user: userName,
         profileImage: userImagePath,

@@ -170,7 +170,7 @@ export default function GroupProfile() {
    const fetchAll = async () => {
       try {
         // 1️⃣ Fetch posts
-        const postsData = await all("groups", groupId, "posts");
+        const postsData = await all("groups", groupId, "group-posts");
         const finalPosts = postsData.docs.map((doc) => {
           const data = doc.data();
           return {
@@ -200,9 +200,9 @@ export default function GroupProfile() {
               const commentSnap = await all(
                 "groups",
                 groupId,
-                "posts",
+                "group-posts",
                 post.id,
-                "comments",
+                "group-comments",
               );
 
               commentsMap[post.id] = commentSnap.docs.map((c: any) => ({
@@ -243,7 +243,7 @@ export default function GroupProfile() {
           const newLikes = newLiked ? post.likes + 1 : post.likes - 1;
 
           // Update Firestore using your helper
-          update("groups", groupId, "posts", postId).value({
+          update("groups", groupId, "group-posts", postId).value({
             liked: newLiked,
             likes: newLikes,
           });
@@ -299,27 +299,27 @@ export default function GroupProfile() {
     const postToUpdate = posts.find((p) => p.id === postId);
     if (!postToUpdate || !postToUpdate.newComment.trim()) return;
 
-    // 2️⃣ Add comment to Firestore (or your helper)
+   
     const newCommentData = {
       user: userName,
       text: postToUpdate.newComment,
       profileImage: userImagePath,
-      postId,
+      postId, userId
     };
 
     const docRef = await add(
       "groups",
       groupId,
-      "posts",
+      "group-posts",
       postId,
-      "comments",
+      "group-comments",
     ).value(newCommentData);
 
     const newComment: Comment = {
       id: docRef?.id || `${Date.now()}-${Math.floor(Math.random() * 10000)}`, // unique ID
       ...newCommentData,
     };
-
+fetchAll();
     // 3️⃣ Update state
     setPosts((prev) =>
       prev.map((post) =>
@@ -480,7 +480,7 @@ const showDelete = (postID:any) => {
 }
 
 const deletePost = async(postID:any) => {
-remove("groups", groupId, "posts", postID);
+remove("groups", groupId, "group-posts", postID);
 fetchAll()
  setShowDropdown(false)
 }
@@ -716,7 +716,7 @@ fetchAll()
                   {post.showComments && (
                     <View style={styles.commentSection}>
                       {(comments[post.id] || []).map((comment) => (
-                        <View key={comment.postId} style={styles.commentRow}>
+                        <View key={comment.id} style={styles.commentRow}>
                           <Image
                             source={{ uri: comment.profileImage }}
                             style={styles.commentProfile}
