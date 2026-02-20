@@ -75,3 +75,42 @@ export const saveAdoptPet = async (
     throw error; // important so UI knows it failed
   }
 };
+
+
+
+export const savePost = async (
+  userId: string,
+  item: {
+    id: string;
+    caption: string;
+    images: string[];
+    ownerId?: string;
+    ownerName: string;
+    ownerImage: string;
+    saveCategory: string;
+    postCreatedAt:string;
+  },
+) => {
+  try {
+    if (!userId) throw new Error("User ID is required");
+    if (!item.id) throw new Error("Post ID is required");
+
+    const savedRef = doc(db, "users", userId, "savedItems", item.id);
+
+    await setDoc(savedRef, {
+      caption: item.caption || "",
+      images: item.images || "",
+      ownerId: item.ownerId || null,
+      ownerName: item.ownerName || "",
+      ownerImage: item.ownerImage || "",
+      saveCategory: "posts",
+      postCreatedAt: item.postCreatedAt,
+      savedAt: new Date(),
+    });
+
+    console.log("Adoption post saved!");
+  } catch (error) {
+    console.error("Error saving adoption post:", error);
+    throw error; // important so UI knows it failed
+  }
+};

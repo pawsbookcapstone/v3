@@ -15,6 +15,7 @@ import {
   where,
 } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
+import { savePost } from "@/helpers/savedItems";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useNotificationHook } from "@/hooks/notificationHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
@@ -476,14 +477,28 @@ const Home = () => {
     ToastAndroid.show("You are now following this page!", ToastAndroid.SHORT);
   };
 
-  const handleSavePost = (postId: string, _unSavedId: string | null) => {
-    if (_unSavedId) remove("users", userId, "saved", _unSavedId);
+  const handleSavePost = async(postId: string, _unSavedId: string | null) => {
+     const selectedPost = posts.find((p: any) => p.id === selectedPostId);
+    //  console.log("saved",  JSON.stringify(selectedPost))
+    if (_unSavedId) remove("users", userId, "savedItems", _unSavedId);
     else
-      add("users", userId, "saved").value({
-        saved_id: postId,
-        saved_at: serverTimestamp(),
-        is_post: true,
-      });
+
+ await savePost(userId, {
+      id: selectedPostId as string,
+      caption: selectedPost.body,
+      images: selectedPost.img_paths,
+      ownerId: selectedPost.creator_id,
+      ownerName: selectedPost.creator_name,
+      ownerImage: selectedPost.creator_img_path,
+      saveCategory: "posts",
+  postCreatedAt: selectedPost.date, 
+    })
+
+      // add("users", userId, "savedItems").value({
+      //   saved_id: postId,
+      //   saved_at: serverTimestamp(),
+      //   is_post: true,
+      // });
   };
 
   const handleSeeProfile = (post: any) => {

@@ -11,6 +11,7 @@ import {
   FlatList,
   Image,
   Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,6 +20,7 @@ import {
 
 import { useAppContext } from "@/AppsProvider";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
+import { Timestamp } from "firebase/firestore";
 
 type BaseSavedItem = {
   id: string;
@@ -29,8 +31,10 @@ type BaseSavedItem = {
 type PostItem = BaseSavedItem & {
   saveCategory: "posts";
   title: string;
-  description: string;
-  time: string;
+  createdAt: string;
+  ownerId?: string;
+  ownerName: string;
+  ownerImage: string;
 };
 
 type MarketplaceItem = BaseSavedItem & {
@@ -131,9 +135,16 @@ const Saved = () => {
                 id: doc.id,
                 saveCategory: "posts",
                 images,
-                title: data.title ?? "",
-                description: data.description ?? "",
-                time: data.time ?? "",
+                title: data.caption ?? "",
+                // description: data.description ?? "",
+                createdAt: data.postCreatedAt ?? "",
+                ownerId: data.ownerId,
+                ownerName: data.ownerName ?? "",
+                ownerImage: data.ownerImage ?? "",
+
+                //     ownerId: selectedPost.creator_id,
+                //     ownerName: selectedPost.creator_name,
+                //     ownerImage: selectedPost.creator_img_path,
               };
 
             case "adopt":
@@ -196,8 +207,30 @@ const Saved = () => {
         const post = item as PostItem;
         images = post.images;
         title = post.title;
-        description = post.description;
-        extraInfo = <Text style={styles.time}>{post.time}</Text>;
+        // description = post.description;
+        extraInfo = (
+          <Pressable
+            style={styles.ownerRow}
+            onPress={() =>
+              router.push({
+                pathname: "/usable/user-profile",
+                params: {
+                  userToViewId: post.ownerId,
+                },
+              })
+            }
+          >
+            <Image
+              source={{ uri: post.ownerImage }}
+              style={styles.ownerImage}
+            />
+            <Text style={styles.ownerName}>{post.ownerName}</Text>
+           {/* <Text>
+  {((post.creat as Timestamp)?.toDate().toLocaleString()) || ""}
+</Text> */}
+          </Pressable>
+        );
+     
         break;
       }
 
@@ -207,13 +240,26 @@ const Saved = () => {
         title = market.name;
         description = market.description;
         extraInfo = (
-          <View style={styles.ownerRow}>
-            <Image
-              source={{ uri: market.ownerImage }}
-              style={styles.ownerImage}
-            />
-            <Text style={styles.price}>{market.price}</Text>;
-            <Text style={styles.ownerName}>{market.ownerName}</Text>
+          <View>
+            <Text style={styles.price}>₱{market.price}</Text>
+            <Pressable
+              style={styles.ownerRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/usable/user-profile",
+                  params: {
+                    userToViewId: market.ownerId,
+                  },
+                })
+              }
+            >
+              <Image
+                source={{ uri: market.ownerImage }}
+                style={styles.ownerImage}
+              />
+
+              <Text style={styles.ownerName}>{market.ownerName}</Text>
+            </Pressable>
           </View>
         );
 
@@ -226,20 +272,66 @@ const Saved = () => {
         title = adopt.caption;
         description = adopt.petCategory;
         extraInfo = (
-          <View style={styles.ownerRow}>
+          <Pressable
+            style={styles.ownerRow}
+            onPress={() =>
+              router.push({
+                pathname: "/usable/user-profile",
+                params: {
+                  userToViewId: adopt.ownerId,
+                },
+              })
+            }
+          >
             <Image
               source={{ uri: adopt.ownerImage }}
               style={styles.ownerImage}
             />
             <Text style={styles.ownerName}>{adopt.ownerName}</Text>
-          </View>
+          </Pressable>
         );
         break;
       }
     }
 
     return (
+  <>
+    {activeTab === "Posts" ? (
       <View style={styles.card}>
+          <View style={styles.content}>
+          {extraInfo}
+             {/* <Text style={styles.title}>{time}</Text> */}
+               <Text style={styles.title}>{title}</Text>
+        </View>
+        {images.length > 0 && (
+     <View style={{ ...styles.imageGrid, marginBottom: 5 }}>
+            {images.slice(0, 3).map((img, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.imageWrapper}
+                onPress={() => openImageModal(images, idx)}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={{ uri: img }}
+                  style={styles.gridImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+      
+
+        <TouchableOpacity
+          style={styles.trashButton}
+          onPress={() => removeItem(item.id)}
+        >
+          <Ionicons name="trash-outline" size={20} color={Colors.white} />
+        </TouchableOpacity>
+      </View>
+    ) :   <View style={styles.card}>
         {images.length > 0 && (
           <View style={styles.imageGrid}>
             {images.slice(0, 3).map((img, idx) => (
@@ -271,9 +363,10 @@ const Saved = () => {
         >
           <Ionicons name="trash-outline" size={20} color={Colors.white} />
         </TouchableOpacity>
-      </View>
-    );
-  };
+      </View>}
+  </>
+);
+  }
 
   return (
     <View style={screens.screen}>
