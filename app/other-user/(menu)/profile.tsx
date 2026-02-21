@@ -653,11 +653,11 @@ const PageProfile = () => {
                         <Text style={styles.userName}>{post.creator_name}</Text>
                         <Text style={styles.postTime}>{post.time}</Text>
                       </View>
-                      <Entypo
+                      {/* <Entypo
                         name="dots-three-horizontal"
                         size={18}
                         color={Colors.gray}
-                      />
+                      /> */}
                     </View>
 
                     {/* Content */}

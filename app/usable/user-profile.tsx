@@ -21,11 +21,10 @@ import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import ProfileSkeleton from "@/shared/components/ProfileSkeleton";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import {
-  Entypo,
   FontAwesome,
   FontAwesome5,
   Ionicons,
-  MaterialIcons,
+  MaterialIcons
 } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { limit, serverTimestamp } from "firebase/firestore";
@@ -864,11 +863,11 @@ const Profile = () => {
                       <Text style={styles.userName}>{post.creator_name}</Text>
                       <Text style={styles.postTime}>{post.time}</Text>
                     </View>
-                    <Entypo
+                    {/* <Entypo
                       name="dots-three-horizontal"
                       size={18}
                       color={Colors.gray}
-                    />
+                    /> */}
                   </View>
 
                   {/* Content */}
