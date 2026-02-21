@@ -20,6 +20,7 @@ import { Entypo, Ionicons, MaterialIcons, Octicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -40,6 +41,7 @@ const PageProfile = () => {
   const { pageId }: { pageId: string } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(false);
+  const [exists, setExists] = useState({ checked: false, has: false });
   const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState<"posts" | "about">("posts");
 
@@ -50,20 +52,6 @@ const PageProfile = () => {
   const [following, setFollowing] = useState(0);
   const [followed, setFollowed] = useState(false);
   const [profile, setProfile] = useState<any>({});
-
-  const dummyProfile = {
-    id: 1,
-    name: "Happy Paws Pet Care",
-    email: "contact@happypaws.com",
-    phone_number: "09171234567",
-    bio: "Professional pet care and grooming services 🐾",
-    profile_photo: "https://randomuser.me/api/portraits/women/44.jpg",
-    cover_photo: "https://picsum.photos/800/400",
-    address: "123 Pet Street, Manila, Philippines",
-    isOpen: true,
-    following: 100,
-    followers: 50,
-  };
 
   const [posts, setPosts] = useState<any>([]);
 
@@ -155,7 +143,13 @@ const PageProfile = () => {
                   .get(),
           ]);
 
+        if (!profileSnap.exists()) {
+          setExists({ checked: true, has: false });
+          return;
+        }
+
         setProfile(profileSnap.data());
+        setExists({ checked: true, has: true });
         setFollowing(followingCount);
         setFollowers(followersCount);
 
@@ -214,6 +208,14 @@ const PageProfile = () => {
 
     fetch();
   }, []);
+
+  if (!loading && exists.checked && !exists.has) {
+    Alert.alert("Error", "Account not found!!!");
+    setTimeout(() => {
+      router.back();
+    }, 500);
+    return;
+  }
 
   const toggleLike = async (id: string) => {
     console.log(id);
