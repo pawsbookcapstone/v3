@@ -1,5 +1,17 @@
 import { useAppContext } from "@/AppsProvider";
-import { add, all, collectionName, count, find, get, saveBatch, set, where } from "@/helpers/db";
+import PostDropdown from "@/components/modals/PostDropdown";
+import {
+  add,
+  all,
+  collectionName,
+  count,
+  find,
+  get,
+  remove,
+  saveBatch,
+  set,
+  where,
+} from "@/helpers/db";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -14,16 +26,25 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { limit, orderBy, serverTimestamp, WriteBatch } from "firebase/firestore";
+import {
+  limit,
+  orderBy,
+  serverTimestamp,
+  WriteBatch,
+} from "firebase/firestore";
 import React, { useState } from "react";
 import {
+  Alert,
+  findNodeHandle,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   TouchableOpacity,
+  UIManager,
   View,
 } from "react-native";
 
@@ -35,6 +56,11 @@ const Profile = () => {
   const [friends, setFriends] = useState<any>([]);
   const [friendsCount, setFriendsCount] = useState<number>(0);
   const [comment, setComment] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ x: 0, y: 0 });
+  const [selectedPostId, setSelectedPostId] = React.useState<string | null>(
+    null,
+  );
 
   const [posts, setPosts] = useState<any>([]);
 
@@ -112,7 +138,6 @@ const Profile = () => {
   //   fetchProfile();
   // }, []);
 
-
   useOnFocusHook(() => {
     let mounted = true;
 
@@ -123,13 +148,15 @@ const Profile = () => {
       .get()
       .then((s) => {
         let v: ((batch: WriteBatch) => void)[] = [];
-        s.docs.forEach(dc => {
-          v.push((batch) => batch.update(dc.ref, {
-            seen: true
-          }))
+        s.docs.forEach((dc) => {
+          v.push((batch) =>
+            batch.update(dc.ref, {
+              seen: true,
+            }),
+          );
         });
-        saveBatch(v)
-      })
+        saveBatch(v);
+      });
 
     const fetchProfile = async () => {
       setLoading(true);
@@ -143,11 +170,11 @@ const Profile = () => {
           get("friends").where(
             where("users", "array-contains", userId),
             where("confirmed", "==", true),
-            limit(6)
+            limit(6),
           ),
           get("posts").where(
             where("creator_id", "==", userId),
-            orderBy("date", "desc")
+            orderBy("date", "desc"),
           ),
         ]);
 
@@ -159,7 +186,7 @@ const Profile = () => {
         /** =========================
          *  2️⃣ Friends list + count
          ========================== */
-        const _friends = friendsSnap.docs.map(f => {
+        const _friends = friendsSnap.docs.map((f) => {
           const d = f.data();
           const otherUserId = d.users[0] === userId ? d.users[1] : d.users[0];
           return {
@@ -176,7 +203,7 @@ const Profile = () => {
         } else {
           const _count = await count("friends").where(
             where("users", "array-contains", userId),
-            where("confirmed", "==", true)
+            where("confirmed", "==", true),
           );
           setFriendsCount(_count);
         }
@@ -185,33 +212,36 @@ const Profile = () => {
          *  3️⃣ Optimize posts (parallel shared + comments)
          ========================== */
         const _posts = await Promise.all(
-          postsSnap.docs.map(async dc => {
+          postsSnap.docs.map(async (dc) => {
             const d = dc.data();
 
             // fetch shared post + comments in parallel
             const [sharedSnap, commentSnap] = await Promise.all([
-              d.shared_post_id ? find("posts", d.shared_post_id) : Promise.resolve(null),
-              all("posts", dc.id, "comments")
+              d.shared_post_id
+                ? find("posts", d.shared_post_id)
+                : Promise.resolve(null),
+              all("posts", dc.id, "comments"),
             ]);
 
             return {
               id: dc.id,
               ...d,
-              liked: Array.isArray(d.liked_by_ids) ? d.liked_by_ids.includes(userId) : false,
+              liked: Array.isArray(d.liked_by_ids)
+                ? d.liked_by_ids.includes(userId)
+                : false,
               showComments: false,
               shared: sharedSnap?.data() ?? null,
-              comments: commentSnap.docs.map(c => ({
+              comments: commentSnap.docs.map((c) => ({
                 id: c.id,
-                ...c.data()
+                ...c.data(),
               })),
-              date_ago: computeTimePassed(d.date.toDate())
+              date_ago: computeTimePassed(d.date.toDate()),
             };
-          })
+          }),
         );
 
         if (!mounted) return;
         setPosts(_posts);
-
       } catch (err) {
         console.error(err);
       } finally {
@@ -225,7 +255,6 @@ const Profile = () => {
       mounted = false;
     };
   }, []);
-
 
   // const dummyprofile = {
   //   profile_photo: profile as string,
@@ -264,7 +293,7 @@ const Profile = () => {
           liked_by_ids: [...liked_by_ids],
           liked: !p.liked,
         };
-      })
+      }),
     );
   };
 
@@ -272,27 +301,27 @@ const Profile = () => {
     setComment("");
     setPosts((prev: any) =>
       prev.map((p: any) =>
-        p.id === id ? { ...p, showComments: !p.showComments } : p
-      )
+        p.id === id ? { ...p, showComments: !p.showComments } : p,
+      ),
     );
   };
-  
-    const handleSeeProfile = (post: any) => {
-      if (post.creator_id === userId) return
-      
-      if (post.creator_is_page)
-        router.push({
-          pathname: '/other-user/profile',
-          params: {
-            pageId: post.creator_id
-          }
-        })
-      else
-        router.push({
-          pathname: "/usable/user-profile",
-          params: { userToViewId: post.creator_id },
-        });
-    };
+
+  const handleSeeProfile = (post: any) => {
+    if (post.creator_id === userId) return;
+
+    if (post.creator_is_page)
+      router.push({
+        pathname: "/other-user/profile",
+        params: {
+          pageId: post.creator_id,
+        },
+      });
+    else
+      router.push({
+        pathname: "/usable/user-profile",
+        params: { userToViewId: post.creator_id },
+      });
+  };
 
   const handleAddComment = (postId: string) => {
     // const text = commentInputs[postId]?.trim();
@@ -315,110 +344,137 @@ const Profile = () => {
               ...p,
               comments: [...p.comments, data],
             }
-          : p
-      )
+          : p,
+      ),
     );
     setComment("");
 
     // setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
   };
 
+  const renderShared = (item: any) => {
+    const maxImagesToShow = 3;
+    const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
 
-    const renderShared = (item: any) => {
-      const maxImagesToShow = 3;
-      const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
-  
-      return (
-        <View style={styles.sharedPostCard}>
-          <View style={styles.sharedPostHeader}>
-            <Pressable
-              style={{ flexDirection: "row", alignItems: "center" }}
-              onPress={() => handleSeeProfile(item)}
+    return (
+      <View style={styles.sharedPostCard}>
+        <View style={styles.sharedPostHeader}>
+          <Pressable
+            style={{ flexDirection: "row", alignItems: "center" }}
+            onPress={() => handleSeeProfile(item)}
+          >
+            {item.creator_img_path ? (
+              <Image
+                source={{ uri: item.creator_img_path }}
+                style={styles.sharedProfileImage}
+              />
+            ) : (
+              <View style={styles.sharedProfileImage} />
+            )}
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginLeft: 8,
+                flex: 1,
+                gap: 10,
+              }}
             >
-              {item.creator_img_path ? (
-                <Image
-                  source={{ uri: item.creator_img_path }}
-                  style={styles.sharedProfileImage}
-                />
-              ) : (
-                <View style={styles.sharedProfileImage} />
-              )}
-  
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginLeft: 8,
-                  flex: 1,
-                  gap: 10,
-                }}
-              >
-                <View>
-                  <Text style={styles.sharedUserName}>{item.creator_name}</Text>
-                  <Text style={styles.sharedPostTime}>{item.date_ago}</Text>
-                </View>
+              <View>
+                <Text style={styles.sharedUserName}>{item.creator_name}</Text>
+                <Text style={styles.sharedPostTime}>{item.date_ago}</Text>
               </View>
-            </Pressable>
             </View>
-  
-          {/* Content */}
-          <Text style={styles.sharedPostContent}>{item.body}</Text>
-  
-          {/* Tagged Pets */}
-          {item.pets && item.pets.length > 0 && (
-            <View style={styles.taggedPetsContainer}>
-              {item.pets.map((pet: any) => (
+          </Pressable>
+        </View>
+
+        {/* Content */}
+        <Text style={styles.sharedPostContent}>{item.body}</Text>
+
+        {/* Tagged Pets */}
+        {item.pets && item.pets.length > 0 && (
+          <View style={styles.taggedPetsContainer}>
+            {item.pets.map((pet: any) => (
+              <TouchableOpacity
+                key={pet.id}
+                style={styles.petChip}
+                onPress={() => console.log("Go to pet profile:", pet.name)}
+              >
+                {pet.img_path ? (
+                  <Image
+                    source={{ uri: pet.img_path }}
+                    style={styles.petAvatar}
+                  />
+                ) : (
+                  <View style={styles.petAvatar} />
+                )}
+                <Text style={styles.petName}>{pet.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Images Grid */}
+        {item.img_paths && item.img_paths.length > 0 && (
+          <View style={styles.imageGrid}>
+            {item.img_paths
+              .slice(0, maxImagesToShow)
+              .map((img: any, idx: number) => (
                 <TouchableOpacity
-                  key={pet.id}
-                  style={styles.petChip}
-                  onPress={() => console.log("Go to pet profile:", pet.name)}
+                  key={idx}
+                  style={styles.imageWrapper}
+                  onPress={() => {
+                    // setSelectedPostImages(item.img_paths ?? []);
+                    // setSelectedIndex(idx);
+                    // setImageModalVisible(true);
+                  }}
+                  activeOpacity={0.8}
                 >
-                  {pet.img_path ? (
-                    <Image
-                      source={{ uri: pet.img_path }}
-                      style={styles.petAvatar}
-                    />
-                  ) : (
-                    <View style={styles.petAvatar} />
+                  <Image
+                    source={{ uri: img }}
+                    style={styles.gridImage}
+                    resizeMode="cover"
+                  />
+                  {idx === maxImagesToShow - 1 && extraImages > 0 && (
+                    <View style={styles.overlay}>
+                      <Text style={styles.overlayText}>+{extraImages}</Text>
+                    </View>
                   )}
-                  <Text style={styles.petName}>{pet.name}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
-          )}
-  
-          {/* Images Grid */}
-          {item.img_paths && item.img_paths.length > 0 && (
-            <View style={styles.imageGrid}>
-              {item.img_paths
-                .slice(0, maxImagesToShow)
-                .map((img: any, idx: number) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.imageWrapper}
-                    onPress={() => {
-                      // setSelectedPostImages(item.img_paths ?? []);
-                      // setSelectedIndex(idx);
-                      // setImageModalVisible(true);
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Image
-                      source={{ uri: img }}
-                      style={styles.gridImage}
-                      resizeMode="cover"
-                    />
-                    {idx === maxImagesToShow - 1 && extraImages > 0 && (
-                      <View style={styles.overlay}>
-                        <Text style={styles.overlayText}>+{extraImages}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-            </View>
-          )}
-        </View>)
-        }
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const openDropdown = (event: any, postId: string) => {
+    const handle = findNodeHandle(event.target);
+    if (handle) {
+      UIManager.measure(handle, (_x, _y, _w, _h, pageX, pageY) => {
+        setDropdownPos({ x: pageX, y: pageY + 20 });
+        setSelectedPostId(postId);
+        setShowDropdown(true);
+      });
+    }
+  };
+
+  const deletePost = (postId: string) => {
+    try {
+      // Delete from Firestore
+      remove("posts", postId); // or deleteDoc(doc(db, "posts", postId));
+
+      // Update local state
+      setPosts((prev: any) => prev.filter((p: any) => p.id !== postId));
+
+      // Feedback
+      ToastAndroid.show("Post deleted", ToastAndroid.SHORT);
+    } catch (e) {
+      console.log("Failed to delete post:", e);
+      Alert.alert("Error", "Failed to delete post");
+    }
+  };
 
   return (
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
@@ -567,12 +623,18 @@ const Profile = () => {
             {/* --- Friends Grid --- */}
             <View style={styles.friendGrid}>
               {friends.map((friend: any) => (
-                <Pressable key={friend.id} style={styles.friendCard} onPress={() => router.push({
-                  pathname: '/usable/user-profile',
-                  params: {
-                    userToViewId: friend.user_id
+                <Pressable
+                  key={friend.id}
+                  style={styles.friendCard}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/usable/user-profile",
+                      params: {
+                        userToViewId: friend.user_id,
+                      },
+                    })
                   }
-                })}>
+                >
                   <Image
                     source={{ uri: friend.img_path }}
                     style={styles.friendImage}
@@ -668,11 +730,15 @@ const Profile = () => {
                     <Text style={styles.userName}>{userName}</Text>
                     <Text style={styles.postTime}>{post.time}</Text>
                   </View>
-                  <Entypo
-                    name="dots-three-horizontal"
-                    size={18}
-                    color={Colors.gray}
-                  />
+                  <TouchableOpacity
+                    onPress={(e) => openDropdown(e, post.id ?? "")}
+                  >
+                    <Entypo
+                      name="dots-three-horizontal"
+                      size={18}
+                      color={Colors.gray}
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Content */}
@@ -744,7 +810,7 @@ const Profile = () => {
                 {/* Comments */}
                 {post.showComments && (
                   <View style={styles.commentSection}>
-                    {post.comments.map((c: any, idx:number) => (
+                    {post.comments.map((c: any, idx: number) => (
                       <View key={idx} style={styles.commentRow}>
                         {c.commented_by_img_path ? (
                           <Image
@@ -755,7 +821,9 @@ const Profile = () => {
                           <View style={styles.commentProfile} />
                         )}
                         <View style={styles.commentBubble}>
-                          <Text style={styles.commentUser}>{c.commented_by_name}</Text>
+                          <Text style={styles.commentUser}>
+                            {c.commented_by_name}
+                          </Text>
                           <Text style={styles.commentText}>{c.message}</Text>
                         </View>
                       </View>
@@ -791,6 +859,33 @@ const Profile = () => {
           </View>
         </ScrollView>
       )}
+      {showDropdown &&
+        selectedPostId &&
+        (() => {
+          const selectedPost = posts.find((p: any) => p.id === selectedPostId);
+          const isMyPost = selectedPost?.creator_id === userId;
+
+          return (
+            <PostDropdown
+              postId={selectedPostId}
+              x={dropdownPos.x}
+              y={dropdownPos.y}
+              onClose={() => setShowDropdown(false)}
+              isMyPost={isMyPost}
+              onSave={(_unSavedId) => {
+                router.push({
+                  pathname: "/pet-owner/post",
+                  params: {
+                    editPost: JSON.stringify(selectedPost),
+                    title: "Edit Post",
+                  },
+                });
+                setShowDropdown(false);
+              }}
+              onReport={(id: string) => deletePost(id)}
+            />
+          );
+        })()}
     </View>
   );
 };
@@ -917,7 +1012,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-
   imageGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1007,13 +1101,13 @@ const styles = StyleSheet.create({
   },
   sharedPostCard: {
     borderWidth: 1,
-    borderBottomWidth:0,
+    borderBottomWidth: 0,
     borderColor: Colors.lightGray,
     marginTop: 10,
     padding: 10,
     borderRadius: 10,
-    borderBottomRightRadius:0,
-    borderBottomLeftRadius:0,
+    borderBottomRightRadius: 0,
+    borderBottomLeftRadius: 0,
     width: "95%",
     alignSelf: "center",
   },

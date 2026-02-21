@@ -21,7 +21,6 @@ import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import ProfileSkeleton from "@/shared/components/ProfileSkeleton";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import {
-  Entypo,
   FontAwesome,
   FontAwesome5,
   Ionicons,
@@ -31,6 +30,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { limit, serverTimestamp } from "firebase/firestore";
 import React, { useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -60,6 +60,7 @@ const Profile = () => {
   const [comment, setComment] = useState("");
   const [friendStatus, setFriendStatus] = useState("Unfriend");
   const [blocked, setBlocked] = useState(false);
+  const [exists, setExists] = useState({ checked: false, has: false });
 
   const addNotif = useNotifHook();
 
@@ -182,7 +183,15 @@ const Profile = () => {
 
         if (!mounted) return;
 
+        if (!userSnap.exists()) {
+          setExists({ checked: true, has: false });
+          return;
+        }
+
         const profileData: any = userSnap.data();
+        setProfile(profileData);
+        setExists({ checked: true, has: true });
+
         setProfile(profileData);
         setBlocked(blockSnap.exists());
 
@@ -277,6 +286,14 @@ const Profile = () => {
       mounted = false;
     };
   }, []);
+
+  if (!loading && exists.checked && !exists.has) {
+    Alert.alert("Error", "Account not found!!!");
+    setTimeout(() => {
+      router.back();
+    }, 500);
+    return;
+  }
 
   const openImageModal = (images: string[], index: number) => {
     setSelectedPostImages(images);
@@ -864,11 +881,11 @@ const Profile = () => {
                       <Text style={styles.userName}>{post.creator_name}</Text>
                       <Text style={styles.postTime}>{post.time}</Text>
                     </View>
-                    <Entypo
+                    {/* <Entypo
                       name="dots-three-horizontal"
                       size={18}
                       color={Colors.gray}
-                    />
+                    /> */}
                   </View>
 
                   {/* Content */}
