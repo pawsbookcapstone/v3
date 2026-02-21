@@ -25,7 +25,7 @@ const CreateAppointment = () => {
     collectionName("users")
       .whereEquals("is_page", true)
       .whereEquals("subscription_status", "Confirmed")
-      .whereEquals("verification_status", "Confirmed")
+      .whereEquals("verification_status", "Approved")
       .whereNotEquals("allow_appointments", false)
       .getMapped((_, data) => ({
         id: data.id,
