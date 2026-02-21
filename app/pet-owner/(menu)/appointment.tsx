@@ -71,6 +71,7 @@ const Appointment = () => {
       const snapshot = await all("appointments");
       const data = snapshot.docs.map((doc) => {
         const d = doc.data() as any;
+
         return {
           id: doc.id,
           type: d.type,
@@ -84,7 +85,6 @@ const Appointment = () => {
           location: d.location || "To be confirmed",
         };
       });
-      console.log({ data });
 
       setAppointments(data);
     } catch (error) {

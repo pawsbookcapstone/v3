@@ -336,6 +336,10 @@ const Home = () => {
 
   useOnFocusHook(() => {
     onRefresh();
+
+    return () => {
+      setShowDropdown(false);
+    };
   }, [userId]);
   // useEffect(() => {
   //   onRefresh();
@@ -477,28 +481,27 @@ const Home = () => {
     ToastAndroid.show("You are now following this page!", ToastAndroid.SHORT);
   };
 
-  const handleSavePost = async(postId: string, _unSavedId: string | null) => {
-     const selectedPost = posts.find((p: any) => p.id === selectedPostId);
+  const handleSavePost = async (postId: string, _unSavedId: string | null) => {
+    const selectedPost = posts.find((p: any) => p.id === selectedPostId);
     //  console.log("saved",  JSON.stringify(selectedPost))
     if (_unSavedId) remove("users", userId, "savedItems", _unSavedId);
     else
+      await savePost(userId, {
+        id: selectedPostId as string,
+        caption: selectedPost.body,
+        images: selectedPost.img_paths,
+        ownerId: selectedPost.creator_id,
+        ownerName: selectedPost.creator_name,
+        ownerImage: selectedPost.creator_img_path,
+        saveCategory: "posts",
+        postCreatedAt: selectedPost.date,
+      });
 
- await savePost(userId, {
-      id: selectedPostId as string,
-      caption: selectedPost.body,
-      images: selectedPost.img_paths,
-      ownerId: selectedPost.creator_id,
-      ownerName: selectedPost.creator_name,
-      ownerImage: selectedPost.creator_img_path,
-      saveCategory: "posts",
-  postCreatedAt: selectedPost.date, 
-    })
-
-      // add("users", userId, "savedItems").value({
-      //   saved_id: postId,
-      //   saved_at: serverTimestamp(),
-      //   is_post: true,
-      // });
+    // add("users", userId, "savedItems").value({
+    //   saved_id: postId,
+    //   saved_at: serverTimestamp(),
+    //   is_post: true,
+    // });
   };
 
   const handleSeeProfile = (post: any) => {
