@@ -21,7 +21,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
 
 const CATEGORIES = [
@@ -37,7 +37,7 @@ const CATEGORIES = [
 ];
 
 const CreateProfile: React.FC = () => {
-  const {userId} = useAppContext()
+  const { userId } = useAppContext();
 
   const [step, setStep] = useState<number>(1);
   const [pageName, setPageName] = useState<string>("");
@@ -45,21 +45,26 @@ const CreateProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [allowAppointments, setAllowAppointments] = useState(false);
   const [imageUri, setImageUri] = useState("");
+  const [imagePermitUri, setImagePermitUri] = useState("");
 
-  const renderLoadingButton = useLoadingHook(true)
-
+  const renderLoadingButton = useLoadingHook(true);
 
   const toggleCategory = (label: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(label) ? prev.filter((p) => p !== label) : [...prev, label]
+      prev.includes(label) ? prev.filter((p) => p !== label) : [...prev, label],
     );
   };
 
   const canProceedToNext = useMemo(() => {
-    if (step === 1) return pageName.trim().length > 0 && imageUri.length > 0;
+    if (step === 1)
+      return (
+        pageName.trim().length > 0 &&
+        imageUri.length > 0 &&
+        imagePermitUri.length > 0
+      );
     if (step === 2) return selectedCategories.length > 0;
     return true;
-  }, [step, pageName, selectedCategories, imageUri]);
+  }, [step, pageName, selectedCategories, imageUri, imagePermitUri]);
 
   const next = () => {
     setError(null);
@@ -67,7 +72,7 @@ const CreateProfile: React.FC = () => {
       setError(
         step === 1
           ? "Please enter a page name and page profile."
-          : "Select at least one category."
+          : "Select at least one category.",
       );
       return;
     }
@@ -90,13 +95,19 @@ const CreateProfile: React.FC = () => {
       setStep(1);
       return;
     }
+    if (imagePermitUri.trim().length === 0) {
+      setError("Please add the supported documents.");
+      setStep(1);
+      return;
+    }
     if (selectedCategories.length === 0) {
       setError("Select at least one category.");
       setStep(2);
       return;
     }
 
-    const imgUrl = await uploadImageUri(imageUri) 
+    const imgUrl = await uploadImageUri(imageUri);
+    const imgPermitUrl = await uploadImageUri(imagePermitUri);
 
     const ref = doc(collection(db, "users"));
     const payload = {
@@ -104,13 +115,16 @@ const CreateProfile: React.FC = () => {
       creator_id: userId,
       is_page: true,
       firstname: pageName.trim(),
-      lastname: '',
+      lastname: "",
       img_path: imgUrl,
       online_status: true,
       categories: selectedCategories,
       allow_appointments: allowAppointments,
       is_open: true,
-      created_at: serverTimestamp()
+      created_at: serverTimestamp(),
+      permitImgPath: imgPermitUrl,
+      subscribed: false,
+      verified: false,
     };
 
     setDoc(ref, payload);
@@ -135,25 +149,44 @@ const CreateProfile: React.FC = () => {
   };
 
   const handleImagePick = async () => {
-      // try {
-        const { status } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") return;
-  
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.8,
-        });
-  
-        if (!result.canceled && result.assets.length > 0) {
-          setImageUri(result.assets[0].uri);
-        }
-      // } catch (error) {
-      //   console.log("Image selection failed:", error);
-      // }
-    };
+    // try {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+    // } catch (error) {
+    //   console.log("Image selection failed:", error);
+    // }
+  };
+
+  const handlePermitImagePick = async () => {
+    // try {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setImagePermitUri(result.assets[0].uri);
+    }
+    // } catch (error) {
+    //   console.log("Image selection failed:", error);
+    // }
+  };
 
   return (
     <View style={screens.screen}>
@@ -223,44 +256,60 @@ const CreateProfile: React.FC = () => {
                 accessibilityLabel="Page name input"
               />
 
-            <Pressable
-              style={styles.toggleRow}
-              onPress={() => setAllowAppointments((prev) => !prev)}
-            >
-              <FontAwesome
-                name={allowAppointments ? "check-square" : "square-o"}
-                size={20}
-                color={allowAppointments ? Colors.primary : "#888"}
-              />
-              <Text style={styles.toggleText}>Allow Appointments</Text>
-            </Pressable>
-
-
-            <Pressable
-              style={styles.coverPhoto}
-              onPress={handleImagePick}
-            >
-              {imageUri ? (
-                <Image
-                  source={{
-                    uri: imageUri,
-                  }}
-                  style={styles.coverImage}
+              <Pressable
+                style={styles.toggleRow}
+                onPress={() => setAllowAppointments((prev) => !prev)}
+              >
+                <FontAwesome
+                  name={allowAppointments ? "check-square" : "square-o"}
+                  size={20}
+                  color={allowAppointments ? Colors.primary : "#888"}
                 />
-              ) : (
-                <FontAwesome name="photo" size={50} color={Colors.gray} />
-              )}
-              <View style={styles.editOverlay}>
-                <FontAwesome name="photo" size={20} color={Colors.white} />
-                <Text style={styles.editText}>Add Photo</Text>
-              </View>
-            </Pressable>
+                <Text style={styles.toggleText}>Allow Appointments</Text>
+              </Pressable>
 
-
+              <Pressable style={styles.coverPhoto} onPress={handleImagePick}>
+                {imageUri ? (
+                  <Image
+                    source={{
+                      uri: imageUri,
+                    }}
+                    style={styles.coverImage}
+                  />
+                ) : (
+                  <FontAwesome name="photo" size={50} color={Colors.gray} />
+                )}
+                <View style={styles.editOverlay}>
+                  <FontAwesome name="photo" size={20} color={Colors.white} />
+                  <Text style={styles.editText}>Add Photo</Text>
+                </View>
+              </Pressable>
 
               <Text style={styles.hint}>
                 This name will appear on your PaswBook profile page.
               </Text>
+
+              <Text style={styles.stepTitle}>2. Supported Document</Text>
+
+              <Pressable
+                style={styles.coverPhoto}
+                onPress={handlePermitImagePick}
+              >
+                {imageUri ? (
+                  <Image
+                    source={{
+                      uri: imagePermitUri,
+                    }}
+                    style={styles.coverImage}
+                  />
+                ) : (
+                  <FontAwesome name="photo" size={50} color={Colors.gray} />
+                )}
+                <View style={styles.editOverlay}>
+                  <FontAwesome name="photo" size={20} color={Colors.white} />
+                  <Text style={styles.editText}>Add Photo</Text>
+                </View>
+              </Pressable>
             </View>
           )}
 
@@ -367,7 +416,7 @@ const CreateProfile: React.FC = () => {
               renderLoadingButton({
                 style: styles.primaryBtn,
                 children: <Text style={styles.primaryBtnText}>Create</Text>,
-                onPress: handleCreate
+                onPress: handleCreate,
               })
               // <Pressable onPress={handleCreate} style={styles.primaryBtn}>
               //   <Text style={styles.primaryBtnText}>Create</Text>
@@ -455,18 +504,18 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 32,
   },
-toggleRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginTop: 12,
-  gap: 8,
-marginBottom: 8
-},
-toggleText: {
-  fontSize: 14,
-  fontFamily: "Roboto",
-  color: "#111",
-},
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    gap: 8,
+    marginBottom: 8,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontFamily: "Roboto",
+    color: "#111",
+  },
 
   stepCard: {
     backgroundColor: Colors.white,

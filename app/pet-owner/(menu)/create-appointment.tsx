@@ -19,25 +19,27 @@ import {
 
 const CreateAppointment = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [pages, setPages] = useState<any>([])
+  const [pages, setPages] = useState<any>([]);
 
   useOnFocusHook(() => {
     collectionName("users")
       .whereEquals("is_page", true)
+      .whereEquals("verified", true)
+      .whereEquals("subscribed", true)
       .whereNotEquals("allow_appointments", false)
       .getMapped((_, data) => ({
         id: data.id,
         name: data.firstname,
         img_path: data.img_path,
-        type: data.categories.join(", ")
+        type: data.categories.join(", "),
       }))
-      .then(res => setPages(res))
-  }, [])
+      .then((res) => setPages(res));
+  }, []);
 
-  const filteredPages = pages.filter((page:any) =>
+  const filteredPages = pages.filter((page: any) =>
     page.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-  const handleAppointment = (page:any) => {
+  const handleAppointment = (page: any) => {
     // Navigate to set-appointment and pass page data
     router.push({
       pathname: "/usable/set-appointment",
