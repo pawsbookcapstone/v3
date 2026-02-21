@@ -551,6 +551,20 @@ const Home = () => {
     }
   };
 
+  //for report
+  const handleReport = (reason: any) => {
+    const dataReport = {
+      reporterName: userName,
+      reporterImg: userImagePath,
+      postId: selectedPostId,
+      reason: reason,
+      status: "pending",
+      time: serverTimestamp(),
+      type: "post",
+    };
+    add("reported-post").value(dataReport);
+  };
+
   const renderShared = (item: any) => {
     const maxImagesToShow = 3;
     const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
@@ -1063,7 +1077,7 @@ const Home = () => {
         onSubmit={(reason) => {
           ToastAndroid.show(`Reported: ${reason}`, ToastAndroid.SHORT);
           console.log("Reported Post:", selectedPostId, "Reason:", reason);
-
+          handleReport(reason);
           // Remove the reported post from the feed
           if (selectedPostId) {
             setPosts((prev: any) =>

@@ -1,7 +1,9 @@
+import { all } from "@/helpers/db";
 import { Colors } from "@/shared/colors/Colors";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Modal,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -17,6 +19,29 @@ interface Props {
 
 export default function SubscribeModal({ visible, onClose, onSubmit }: Props) {
   const [referenceNumber, setReferenceNumber] = useState("");
+  const [gcashNumbers, setGcashNumber] = useState<
+    { id: string; gcash_number: string }[]
+  >([]);
+
+  useEffect(() => {
+    const fetchGcashNumber = async () => {
+      try {
+        const data = await all("admin_users");
+        const finalData = data.docs.map((doc) => {
+          const docData = doc.data();
+          return {
+            id: doc.id,
+            gcash_number: docData.gcash_number || "",
+          };
+        });
+        setGcashNumber(finalData);
+      } catch (err) {
+        console.error("Error fetching GCash numbers:", err);
+      }
+    };
+
+    fetchGcashNumber();
+  }, []);
 
   const ADMIN_GCASH = "09021002020";
 
@@ -40,9 +65,19 @@ export default function SubscribeModal({ visible, onClose, onSubmit }: Props) {
           <Text style={styles.description}>
             You need to subscribe first before creating a page.
           </Text>
+          <Text style={styles.description}>
+            Subscribe for only ₱99 per month to add your page.
+          </Text>
 
           <Text style={styles.label}>Send payment to:</Text>
-          <Text style={styles.gcash}>{ADMIN_GCASH}</Text>
+
+          <ScrollView style={styles.container}>
+            {gcashNumbers.map((user) => (
+              <Text key={user.id} style={styles.gcash}>
+                {user.gcash_number}
+              </Text>
+            ))}
+          </ScrollView>
 
           <TextInput
             placeholder="Enter GCash Reference Number"
@@ -91,8 +126,9 @@ const styles = StyleSheet.create({
   },
   gcash: {
     fontSize: 16,
+    marginBottom: 8,
+
     color: "#007AFF",
-    marginBottom: 15,
   },
   input: {
     borderWidth: 1,
@@ -115,5 +151,8 @@ const styles = StyleSheet.create({
     marginTop: 15,
     textAlign: "center",
     color: "red",
+  },
+  container: {
+    padding: 16,
   },
 });
