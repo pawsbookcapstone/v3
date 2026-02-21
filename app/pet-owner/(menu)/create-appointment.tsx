@@ -24,8 +24,8 @@ const CreateAppointment = () => {
   useOnFocusHook(() => {
     collectionName("users")
       .whereEquals("is_page", true)
-      .whereEquals("verified", true)
-      .whereEquals("subscribed", true)
+      .whereEquals("subscription_status", "Confirmed")
+      .whereEquals("verification_status", "Confirmed")
       .whereNotEquals("allow_appointments", false)
       .getMapped((_, data) => ({
         id: data.id,

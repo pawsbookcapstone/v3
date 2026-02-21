@@ -1,5 +1,6 @@
 // creatProfile.tsx
 import { useAppContext } from "@/AppsProvider";
+import SubscribeModal from "@/components/modals/SubscribeModal";
 import { uploadImageUri } from "@/helpers/cloudinary";
 import { db } from "@/helpers/firebase";
 import { useLoadingHook } from "@/hooks/loadingHook";
@@ -46,6 +47,8 @@ const CreateProfile: React.FC = () => {
   const [allowAppointments, setAllowAppointments] = useState(false);
   const [imageUri, setImageUri] = useState("");
   const [imagePermitUri, setImagePermitUri] = useState("");
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [createText, setCreateText] = useState("Create");
 
   const renderLoadingButton = useLoadingHook(true);
 
@@ -84,7 +87,11 @@ const CreateProfile: React.FC = () => {
     setStep((s) => Math.max(1, s - 1));
   };
 
-  const handleCreate = async () => {
+  const openSubscribe = () => {
+    setShowSubscribeModal(true);
+  };
+
+  const handleCreate = async (referenceNumber: any) => {
     if (pageName.trim().length === 0) {
       setError("Please enter a page name.");
       setStep(1);
@@ -123,8 +130,9 @@ const CreateProfile: React.FC = () => {
       is_open: true,
       created_at: serverTimestamp(),
       permitImgPath: imgPermitUrl,
-      subscribed: false,
-      verified: false,
+      verification_status: "Pending",
+      subscription_status: "Pending",
+      gcashRefNumber: referenceNumber,
     };
 
     setDoc(ref, payload);
@@ -315,7 +323,7 @@ const CreateProfile: React.FC = () => {
 
           {step === 2 && (
             <View style={styles.stepCard}>
-              <Text style={styles.stepTitle}>2. Choose categories</Text>
+              <Text style={styles.stepTitle}>3. Choose categories</Text>
               <Text style={styles.hint}>
                 Pick categories related to pets or pet care (tap to toggle)
               </Text>
@@ -349,7 +357,7 @@ const CreateProfile: React.FC = () => {
 
           {step === 3 && (
             <View style={styles.stepCard}>
-              <Text style={styles.stepTitle}>3. Review & Create</Text>
+              <Text style={styles.stepTitle}>4. Review & Create</Text>
 
               <View style={styles.reviewRow}>
                 <Text style={styles.reviewLabel}>Page name</Text>
@@ -415,8 +423,10 @@ const CreateProfile: React.FC = () => {
             ) : (
               renderLoadingButton({
                 style: styles.primaryBtn,
-                children: <Text style={styles.primaryBtnText}>Create</Text>,
-                onPress: handleCreate,
+                children: (
+                  <Text style={styles.primaryBtnText}>{createText}</Text>
+                ),
+                onPress: openSubscribe,
               })
               // <Pressable onPress={handleCreate} style={styles.primaryBtn}>
               //   <Text style={styles.primaryBtnText}>Create</Text>
@@ -425,6 +435,16 @@ const CreateProfile: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SubscribeModal
+        visible={showSubscribeModal}
+        onSubmit={(refNumber) => {
+          handleCreate(refNumber);
+          renderLoadingButton;
+          setCreateText("Please Wait...");
+        }}
+        onClose={() => setShowSubscribeModal(false)}
+      />
     </View>
   );
 };
