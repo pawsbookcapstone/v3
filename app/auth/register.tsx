@@ -1,4 +1,4 @@
-import { serverTimestamp, set } from "@/helpers/db";
+import { collectionName, serverTimestamp, set } from "@/helpers/db";
 import { auth } from "@/helpers/firebase";
 import { useLoadingHook } from "@/hooks/loadingHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -25,12 +25,12 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   const handleBack = () => {
     router.replace("/StartScreen");
   };
-  const validateForm = () => {
+  const validateForm = async () => {
     if (!firstname.trim()) {
       Alert.alert("Error", "Please enter your first name");
       return false;
@@ -56,11 +56,22 @@ const Register = () => {
       return false;
     }
 
+    const emailExists = await collectionName("users")
+      .whereEquals("email", email.trim())
+      .limit(1)
+      .count();
+
+    if (emailExists == 1) {
+      Alert.alert("Error", "Email already exists.");
+      return false;
+    }
+
     return true;
   };
 
   const onSignUp = async () => {
-    if (!validateForm()) return;
+    const validated = await validateForm();
+    if (!validated) return;
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -83,6 +94,7 @@ const Register = () => {
 
       router.replace("/auth/Login");
     } catch (e) {
+      Alert.alert("Error", "Something went wrong");
       console.log(e);
     }
   };
@@ -198,7 +210,7 @@ const Register = () => {
       {renderLoadingButton({
         style: styles.buttonContainer,
         children: <Text style={styles.buttonText}>Sign Up</Text>,
-        onPress: onSignUp
+        onPress: onSignUp,
       })}
       {/* <Pressable onPress={onSignUp} style={styles.buttonContainer}>
         <Text style={styles.buttonText}>Sign Up</Text>
