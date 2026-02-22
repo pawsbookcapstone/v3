@@ -8,7 +8,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 interface Props {
@@ -50,6 +50,9 @@ export default function SubscribeModal({ visible, onClose, onSubmit }: Props) {
 
           <Text style={styles.description}>
             You need to subscribe first before creating a page.
+          </Text>
+          <Text style={styles.description}>
+            Subscribe for only ₱99 per month to add your page.
           </Text>
 
           <Text style={styles.label}>Send payment to:</Text>
@@ -102,8 +105,9 @@ const styles = StyleSheet.create({
   },
   gcash: {
     fontSize: 16,
+    marginBottom: 8,
+
     color: "#007AFF",
-    marginBottom: 15,
   },
   input: {
     borderWidth: 1,
@@ -126,5 +130,8 @@ const styles = StyleSheet.create({
     marginTop: 15,
     textAlign: "center",
     color: "red",
+  },
+  container: {
+    padding: 16,
   },
 });

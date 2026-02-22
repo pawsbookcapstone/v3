@@ -153,6 +153,8 @@ const PageProfile = () => {
         setFollowing(followingCount);
         setFollowers(followersCount);
 
+        console.log("this is profile snap: ", profileSnap);
+
         // 2️⃣ Collect shared post IDs
         const sharedIds = postsSnap.docs
           .map((d) => d.data().shared_post_id)
@@ -453,7 +455,22 @@ const PageProfile = () => {
               />
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.name}>{profile.firstname}</Text>
+              <View style={[{ flexDirection: "row" }]}>
+                <Text style={styles.name}>{profile.firstname}</Text>
+                {profile.subscription_status == "Confirmed" &&
+                profile.verification_status == "Approved" ? (
+                  <View style={styles.badgeContainer}>
+                    <Entypo name="check" size={14} color="#1E40AF" />
+                    <Text style={styles.blueBadge}>Verified</Text>
+                  </View>
+                ) : (
+                  <View style={styles.pendingContainer}>
+                    {/* <Entypo name="check" size={14} color="#1E40AF" /> */}
+                    <Text style={styles.blueBadge}>Pending</Text>
+                  </View>
+                )}
+              </View>
+
               <Text style={styles.followers}>
                 <Text style={{ fontWeight: "bold" }}>{followers} </Text>
                 Followers,{" "}
@@ -972,7 +989,12 @@ const styles = StyleSheet.create({
   },
   profileImage: { width: "100%", height: "100%", borderRadius: 70 },
   profileInfo: { marginLeft: 10, marginTop: 10 },
-  name: { fontSize: 24, fontFamily: "RobotoSemiBold", color: "#000" },
+  name: {
+    fontSize: 24,
+    fontFamily: "RobotoSemiBold",
+    color: "#000",
+    marginRight: 15,
+  },
   bio: { fontSize: 15, color: "#555", marginTop: 25, marginBottom: 10 },
   followers: { fontSize: 15, color: "#555", marginTop: 5 },
   actionWrapper: {
@@ -1151,6 +1173,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginTop: 5,
+  },
+  badgeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E6F0FF", // light blue
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    width: "20%",
+  },
+  pendingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FACC15",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    width: "20%",
+  },
+  blueBadge: {
+    color: "#1E40AF", // dark blue
+    fontSize: 10,
+    fontWeight: "600",
+    marginLeft: 4,
   },
   appointmentDetail: { fontSize: 14, color: "#333" },
 });
