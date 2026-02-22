@@ -1,12 +1,14 @@
+import { collectionName } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import React, { useState } from "react";
 import {
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 interface Props {
@@ -17,8 +19,17 @@ interface Props {
 
 export default function SubscribeModal({ visible, onClose, onSubmit }: Props) {
   const [referenceNumber, setReferenceNumber] = useState("");
+  const [number, setNumber] = useState("");
 
-  const ADMIN_GCASH = "09021002020";
+  useOnFocusHook(() => {
+    collectionName("admin_users")
+      .get()
+      .then(({ docs }) => {
+        if (docs.length == 0) return;
+
+        setNumber(docs[0].data().gcash_number);
+      });
+  });
 
   const handleSubmit = () => {
     if (!referenceNumber.trim()) {
@@ -42,7 +53,7 @@ export default function SubscribeModal({ visible, onClose, onSubmit }: Props) {
           </Text>
 
           <Text style={styles.label}>Send payment to:</Text>
-          <Text style={styles.gcash}>{ADMIN_GCASH}</Text>
+          <Text style={styles.gcash}>{number}</Text>
 
           <TextInput
             placeholder="Enter GCash Reference Number"

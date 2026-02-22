@@ -16,7 +16,7 @@ import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
-import { FontAwesome6, MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -276,12 +276,12 @@ const ChatField = () => {
             </View>
           </Pressable>
 
-          <FontAwesome6
+          {/* <FontAwesome6
             name="video"
             size={20}
             color={Colors.primary}
             style={{ position: "absolute", right: 10, marginTop: 10 }}
-          />
+          /> */}
         </View>
       </HeaderLayout>
 
