@@ -95,11 +95,10 @@ export default function GroupProfile() {
 
   const [pageDetails, setPageDetails] = useState<Group | null>(null);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
-   const [showDropdown, setShowDropdown] = useState(false);
-     const [selectedPostId, setSelectedPostId] = React.useState<string | null>(
-       null,
-     );
-     
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedPostId, setSelectedPostId] = React.useState<string | null>(
+    null,
+  );
 
   let membershipQuestions: string[] = [];
 
@@ -162,78 +161,73 @@ export default function GroupProfile() {
   };
 
   useOnFocusHook(() => {
-   
-
     fetchAll();
   }, []);
 
-   const fetchAll = async () => {
-      try {
-        // 1️⃣ Fetch posts
-        const postsData = await all("groups", groupId, "group-posts");
-        const finalPosts = postsData.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            user: data.user,
-            profileImage: data.profileImage,
-            time: formatTimeAgo(data.time?.toDate()),
-            content: data.content,
-            images: data.images || null,
-            likes: data.likes || 0,
-            liked: data.liked || false,
-            comments: data.comments || [],
-            showComments: false,
-            newComment: data.newComment || "",
-            userId: data.userId,
-          };
-        });
+  const fetchAll = async () => {
+    try {
+      // 1️⃣ Fetch posts
+      const postsData = await all("groups", groupId, "group-posts");
+      const finalPosts = postsData.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          user: data.user,
+          profileImage: data.profileImage,
+          time: formatTimeAgo(data.time?.toDate()),
+          content: data.content,
+          images: data.images || null,
+          likes: data.likes || 0,
+          liked: data.liked || false,
+          comments: data.comments || [],
+          showComments: false,
+          newComment: data.newComment || "",
+          userId: data.userId,
+        };
+      });
 
-        setPosts(finalPosts);
-        console.log(posts);
+      setPosts(finalPosts);
+      console.log(posts);
 
-        // 2️⃣ Fetch comments after posts are loaded
-        const commentsMap: Record<string, Comment[]> = {};
-        await Promise.all(
-          finalPosts.map(async (post) => {
-            try {
-              const commentSnap = await all(
-                "groups",
-                groupId,
-                "group-posts",
-                post.id,
-                "group-comments",
-              );
+      // 2️⃣ Fetch comments after posts are loaded
+      const commentsMap: Record<string, Comment[]> = {};
+      await Promise.all(
+        finalPosts.map(async (post) => {
+          try {
+            const commentSnap = await all(
+              "groups",
+              groupId,
+              "group-posts",
+              post.id,
+              "group-comments",
+            );
 
-              commentsMap[post.id] = commentSnap.docs.map((c: any) => ({
-                id: c.id || `${Date.now()}-${Math.random()}`,
-                ...c.data(),
-              }));
-            } catch (error) {
-              console.log(
-                `Error fetching comments for post ${post.id}:`,
-                error,
-              );
-              commentsMap[post.id] = [];
-            }
-          }),
-        );
+            commentsMap[post.id] = commentSnap.docs.map((c: any) => ({
+              id: c.id || `${Date.now()}-${Math.random()}`,
+              ...c.data(),
+            }));
+          } catch (error) {
+            console.log(`Error fetching comments for post ${post.id}:`, error);
+            commentsMap[post.id] = [];
+          }
+        }),
+      );
 
-        setComments(commentsMap);
-        // console.log("Fetched comments map:", commentsMap);
+      setComments(commentsMap);
+      // console.log("Fetched comments map:", commentsMap);
 
-        const [groupsSnap, joinSnap] = await Promise.all([
-          get("groups").where(where(documentId(), "==", groupId)),
-          get("groups", groupId, "join-request").where(
-            where(documentId(), "==", userId),
-          ),
-        ]);
-        setPageDetails(groupsSnap.docs[0].data() as Group);
-        setJoinRequestSent(!joinSnap.empty);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
+      const [groupsSnap, joinSnap] = await Promise.all([
+        get("groups").where(where(documentId(), "==", groupId)),
+        get("groups", groupId, "join-request").where(
+          where(documentId(), "==", userId),
+        ),
+      ]);
+      setPageDetails(groupsSnap.docs[0].data() as Group);
+      setJoinRequestSent(!joinSnap.empty);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
 
   const toggleLike = (postId: string) => {
     setPosts((prev) =>
@@ -299,12 +293,12 @@ export default function GroupProfile() {
     const postToUpdate = posts.find((p) => p.id === postId);
     if (!postToUpdate || !postToUpdate.newComment.trim()) return;
 
-   
     const newCommentData = {
       user: userName,
       text: postToUpdate.newComment,
       profileImage: userImagePath,
-      postId, userId
+      postId,
+      userId,
     };
 
     const docRef = await add(
@@ -319,7 +313,7 @@ export default function GroupProfile() {
       id: docRef?.id || `${Date.now()}-${Math.floor(Math.random() * 10000)}`, // unique ID
       ...newCommentData,
     };
-fetchAll();
+    fetchAll();
     // 3️⃣ Update state
     setPosts((prev) =>
       prev.map((post) =>
@@ -368,6 +362,9 @@ fetchAll();
         await set("groups", groupId, "members", userId).value({
           userId,
           joinedAt: serverTimestamp(),
+          userImagePath,
+          userName,
+          role: "member",
         });
 
         await set("users", userId, "joined-groups", groupId).value({
@@ -453,37 +450,35 @@ fetchAll();
     // if (!groupName.trim()) return;
   };
 
+  // const PostDropdown = ({ postId, x, y, isMyPost, onClose, onSave, onReport }: PostDropdownProps) => {
+  //   return (
+  //     <Pressable style={styles.overlay} onPress={onClose}>
+  //       <View style={[styles.dropdown, { top: y, left: x }]}>
+  //         {isMyPost && (
+  //           <Pressable style={styles.dropdownItem} onPress={() => onSave(postId)}>
+  //             <Text style={styles.dropdownText}>Edit Post</Text>
+  //           </Pressable>
+  //         )}
+  //         <Pressable style={styles.dropdownItem} onPress={() => onReport(postId)}>
+  //           <Text style={[styles.dropdownText, { color: isMyPost ? "red" : "black" }]}>
+  //             {isMyPost ? "Delete Post" : "Report Post"}
+  //           </Text>
+  //         </Pressable>
+  //       </View>
+  //     </Pressable>
+  //   );
+  // };
 
+  const showDelete = (postID: any) => {
+    setShowDropdown(true);
+    setSelectedPostId(postID);
+  };
 
-// const PostDropdown = ({ postId, x, y, isMyPost, onClose, onSave, onReport }: PostDropdownProps) => {
-//   return (
-//     <Pressable style={styles.overlay} onPress={onClose}>
-//       <View style={[styles.dropdown, { top: y, left: x }]}>
-//         {isMyPost && (
-//           <Pressable style={styles.dropdownItem} onPress={() => onSave(postId)}>
-//             <Text style={styles.dropdownText}>Edit Post</Text>
-//           </Pressable>
-//         )}
-//         <Pressable style={styles.dropdownItem} onPress={() => onReport(postId)}>
-//           <Text style={[styles.dropdownText, { color: isMyPost ? "red" : "black" }]}>
-//             {isMyPost ? "Delete Post" : "Report Post"}
-//           </Text>
-//         </Pressable>
-//       </View>
-//     </Pressable>
-//   );
-// };
-
-const showDelete = (postID:any) => {
- setShowDropdown(true)
- setSelectedPostId(postID)
-}
-
-const deletePost = async(postID:any) => {
-remove("groups", groupId, "group-posts", postID);
-fetchAll()
- setShowDropdown(false)
-}
+  const deletePost = async (postID: any) => {
+    remove("groups", groupId, "group-posts", postID);
+    fetchAll();
+    setShowDropdown(false);
+  };
 
   return (
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
@@ -492,7 +487,7 @@ fetchAll()
           title={title as string}
           onBack={() => {
             // router.push("/pet-owner/(menu)/community");
-            router.back()
+            router.back();
           }}
           centerTitle
         />
@@ -638,14 +633,15 @@ fetchAll()
                         <Text style={styles.postTime}>{post.time}</Text>
                       </View>
                     </Pressable>
-                    {post.userId === userId? (  <Entypo
-                      name="dots-three-horizontal"
-                      size={18}
-                      color="#555"
-                      style={{ marginRight: 5 }}
-                      onPress={() => showDelete(post.id)}
-                    />): null}
-                  
+                    {post.userId === userId ? (
+                      <Entypo
+                        name="dots-three-horizontal"
+                        size={18}
+                        color="#555"
+                        style={{ marginRight: 5 }}
+                        onPress={() => showDelete(post.id)}
+                      />
+                    ) : null}
                   </View>
 
                   {/* Content */}
@@ -850,8 +846,7 @@ fetchAll()
         </View>
       </Modal>
 
-
-   {/* Modal */}
+      {/* Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -866,7 +861,7 @@ fetchAll()
             <Pressable
               style={styles.deleteBtn}
               onPress={() => {
-                deletePost(selectedPostId)
+                deletePost(selectedPostId);
                 setShowDropdown(false); // close modal
               }}
             >
@@ -875,7 +870,6 @@ fetchAll()
           </View>
         </Pressable>
       </Modal>
-      
 
       {imageModalVisible && (
         <Modal visible={imageModalVisible} transparent={true}>
@@ -1168,8 +1162,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
-
-
 
   overlayDleteBTN: {
     position: "absolute",
