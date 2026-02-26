@@ -3,6 +3,7 @@ import {
   Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -20,6 +21,7 @@ const ReportPostModal: React.FC<ReportPostModalProps> = ({
   onSubmit,
 }) => {
   const [selectedReason, setSelectedReason] = useState<string>("");
+  const [otherReason, setOtherReason] = useState<string>("");
 
   const reasons = [
     "Spam or misleading",
@@ -30,11 +32,21 @@ const ReportPostModal: React.FC<ReportPostModalProps> = ({
   ];
 
   const handleSubmit = () => {
-    if (selectedReason) {
-      onSubmit(selectedReason);
-      setSelectedReason("");
-      onClose();
+    if (!selectedReason) return;
+
+    if (selectedReason === "Other" && !otherReason.trim()) {
+      return;
     }
+
+    const finalReason =
+      selectedReason === "Other" ? otherReason.trim() : selectedReason;
+
+    onSubmit(finalReason);
+
+    // Reset states
+    setSelectedReason("");
+    setOtherReason("");
+    onClose();
   };
 
   return (
@@ -46,6 +58,7 @@ const ReportPostModal: React.FC<ReportPostModalProps> = ({
 
         <View style={styles.modalContainer}>
           <Text style={styles.title}>Report Post</Text>
+
           {reasons.map((reason) => (
             <TouchableOpacity
               key={reason}
@@ -58,10 +71,7 @@ const ReportPostModal: React.FC<ReportPostModalProps> = ({
               <Text
                 style={[
                   styles.reasonText,
-                  selectedReason === reason && {
-                    fontWeight: "600",
-                    color: "#000",
-                  },
+                  selectedReason === reason && styles.selectedText,
                 ]}
               >
                 {reason}
@@ -69,13 +79,30 @@ const ReportPostModal: React.FC<ReportPostModalProps> = ({
             </TouchableOpacity>
           ))}
 
+          {/* Show input if "Other" is selected */}
+          {selectedReason === "Other" && (
+            <TextInput
+              placeholder="Please specify..."
+              value={otherReason}
+              onChangeText={setOtherReason}
+              style={styles.input}
+              multiline
+            />
+          )}
+
           <TouchableOpacity
             style={[
               styles.submitBtn,
-              !selectedReason && { backgroundColor: "#ccc" },
+              (!selectedReason ||
+                (selectedReason === "Other" && !otherReason.trim())) && {
+                backgroundColor: "#ccc",
+              },
             ]}
             onPress={handleSubmit}
-            disabled={!selectedReason}
+            disabled={
+              !selectedReason ||
+              (selectedReason === "Other" && !otherReason.trim())
+            }
           >
             <Text style={styles.submitText}>Submit</Text>
           </TouchableOpacity>
@@ -127,6 +154,20 @@ const styles = StyleSheet.create({
   reasonText: {
     fontSize: 14,
     color: "#333",
+  },
+  selectedText: {
+    fontWeight: "600",
+    color: "#000",
+  },
+  input: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    minHeight: 60,
+    textAlignVertical: "top",
   },
   submitBtn: {
     marginTop: 15,

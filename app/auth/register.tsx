@@ -5,7 +5,10 @@ import { Colors } from "@/shared/colors/Colors";
 import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
 import { useState } from "react";
 import {
   Alert,
@@ -23,6 +26,7 @@ const Register = () => {
   const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const renderLoadingButton = useLoadingHook(true);
@@ -66,6 +70,11 @@ const Register = () => {
       return false;
     }
 
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Password does not match.");
+      return false;
+    }
+
     return true;
   };
 
@@ -79,6 +88,9 @@ const Register = () => {
         email,
         password,
       );
+      const user = userCredential.user;
+
+      await sendEmailVerification(user);
 
       await set("users", userCredential.user.uid).value({
         id: userCredential.user.uid,
@@ -91,7 +103,10 @@ const Register = () => {
         img_path:
           "https://res.cloudinary.com/diwwrxy8b/image/upload/v1769641991/jzibxr8wuvqhfqwcnusm.jpg",
       });
-
+      Alert.alert(
+        "Success",
+        "Account created! Please check your email to verify your account.",
+      );
       router.replace("/auth/Login");
     } catch (e) {
       Alert.alert("Error", "Something went wrong");
@@ -183,6 +198,43 @@ const Register = () => {
             value={password}
             secureTextEntry={!showPassword}
             onChangeText={setPassword}
+            style={[styles.input, { flex: 1 }]}
+          />
+
+          <TouchableOpacity
+            disabled={password.length === 0}
+            onPress={() => setShowPassword((prev) => !prev)}
+            style={{ padding: 5 }}
+          >
+            {password.length > 0 ? (
+              <FontAwesome5
+                name={showPassword ? "eye-slash" : "eye"}
+                size={15}
+                color="#ccc"
+                marginRight={10}
+              />
+            ) : (
+              <View style={{ width: 15 }} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Re-type password */}
+      <View style={{ flexDirection: "column", gap: 5 }}>
+        <Text style={styles.label}>Confirm Password</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome5
+            name="lock"
+            size={20}
+            color={Colors.primary}
+            marginLeft={25}
+          />
+          <TextInput
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            secureTextEntry={!showPassword}
+            onChangeText={setConfirmPassword}
             style={[styles.input, { flex: 1 }]}
           />
 
@@ -297,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginTop: 50,
+    marginTop: 20,
   },
   buttonText: {
     color: "white",

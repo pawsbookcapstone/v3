@@ -4,7 +4,7 @@ import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -20,7 +20,6 @@ import {
 
 import { useAppContext } from "@/AppsProvider";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
-import { Timestamp } from "firebase/firestore";
 
 type BaseSavedItem = {
   id: string;
@@ -63,9 +62,14 @@ const Saved = () => {
   const router = useRouter();
   const { userId } = useAppContext();
 
-  const [activeTab, setActiveTab] = useState<
-    "Posts" | "Marketplace" | "Adoption"
-  >("Posts");
+  // const [activeTab, setActiveTab] = useState<
+  //   "Posts" | "Marketplace" | "Adoption"
+  // >("Posts");
+  const params = useLocalSearchParams<{
+    activeTab?: "Posts" | "Marketplace" | "Adoption";
+  }>();
+  console.log(params.activeTab);
+  const [activeTab, setActiveTab] = useState(params.activeTab ?? "Posts");
 
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);
@@ -225,12 +229,12 @@ const Saved = () => {
               style={styles.ownerImage}
             />
             <Text style={styles.ownerName}>{post.ownerName}</Text>
-           {/* <Text>
+            {/* <Text>
   {((post.creat as Timestamp)?.toDate().toLocaleString()) || ""}
 </Text> */}
           </Pressable>
         );
-     
+
         break;
       }
 
@@ -295,78 +299,78 @@ const Saved = () => {
     }
 
     return (
-  <>
-    {activeTab === "Posts" ? (
-      <View style={styles.card}>
-          <View style={styles.content}>
-          {extraInfo}
-             {/* <Text style={styles.title}>{time}</Text> */}
-               <Text style={styles.title}>{title}</Text>
-        </View>
-        {images.length > 0 && (
-     <View style={{ ...styles.imageGrid, marginBottom: 5 }}>
-            {images.slice(0, 3).map((img, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.imageWrapper}
-                onPress={() => openImageModal(images, idx)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: img }}
-                  style={styles.gridImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
+      <>
+        {activeTab === "Posts" ? (
+          <View style={styles.card}>
+            <View style={styles.content}>
+              {extraInfo}
+              {/* <Text style={styles.title}>{time}</Text> */}
+              <Text style={styles.title}>{title}</Text>
+            </View>
+            {images.length > 0 && (
+              <View style={{ ...styles.imageGrid, marginBottom: 5 }}>
+                {images.slice(0, 3).map((img, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.imageWrapper}
+                    onPress={() => openImageModal(images, idx)}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: img }}
+                      style={styles.gridImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.trashButton}
+              onPress={() => removeItem(item.id)}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            {images.length > 0 && (
+              <View style={styles.imageGrid}>
+                {images.slice(0, 3).map((img, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.imageWrapper}
+                    onPress={() => openImageModal(images, idx)}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: img }}
+                      style={styles.gridImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.content}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.description}>{description}</Text>
+              {extraInfo}
+            </View>
+
+            <TouchableOpacity
+              style={styles.trashButton}
+              onPress={() => removeItem(item.id)}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.white} />
+            </TouchableOpacity>
           </View>
         )}
-
-      
-
-        <TouchableOpacity
-          style={styles.trashButton}
-          onPress={() => removeItem(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={Colors.white} />
-        </TouchableOpacity>
-      </View>
-    ) :   <View style={styles.card}>
-        {images.length > 0 && (
-          <View style={styles.imageGrid}>
-            {images.slice(0, 3).map((img, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.imageWrapper}
-                onPress={() => openImageModal(images, idx)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: img }}
-                  style={styles.gridImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-          {extraInfo}
-        </View>
-
-        <TouchableOpacity
-          style={styles.trashButton}
-          onPress={() => removeItem(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={Colors.white} />
-        </TouchableOpacity>
-      </View>}
-  </>
-);
-  }
+      </>
+    );
+  };
 
   return (
     <View style={screens.screen}>

@@ -58,6 +58,13 @@ const Login = () => {
 
       const userDoc = await find("users", userId);
 
+      const firebaseUser = userCredential.user;
+
+      if (!firebaseUser.emailVerified) {
+        await auth.signOut();
+        throw "Please verify your email first!";
+      }
+
       if (!userDoc.exists()) {
         await auth.signOut();
         throw "Account not found!!!";

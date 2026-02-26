@@ -70,6 +70,12 @@ const ItemDetails = () => {
     });
 
     alert("Item saved to your collection!");
+    router.push({
+      pathname: "/pet-owner/(menu)/saved",
+      params: {
+        activeTab: "Marketplace",
+      },
+    });
   };
 
   const handleChat = () => {
@@ -186,7 +192,21 @@ const ItemDetails = () => {
 
         {/* Seller Information */}
         <Text style={styles.title}>Seller Information</Text>
-        <View style={styles.sellerRow}>
+        <Pressable
+          style={styles.sellerRow}
+          onPress={() => {
+            if (userId !== otherUserId) {
+              router.push({
+                pathname: "/usable/user-profile",
+                params: {
+                  userToViewId: otherUserId,
+                },
+              });
+            } else {
+              router.push("/pet-owner/profile");
+            }
+          }}
+        >
           <Image
             source={{
               uri:
@@ -196,7 +216,7 @@ const ItemDetails = () => {
             style={styles.sellerAvatar}
           />
           <Text style={styles.infoValue}>{seller}</Text>
-        </View>
+        </Pressable>
 
         <View style={styles.devider} />
 

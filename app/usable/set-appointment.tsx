@@ -69,6 +69,14 @@ const SetAppointment = () => {
       alert("Please complete all fields");
       return;
     }
+    if (contactNumber.length !== 11) {
+      alert("Your contact number must be 11 digits.");
+      return;
+    }
+    if (!contactNumber.startsWith("09")) {
+      alert("Your contact number must start with 09.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -102,13 +110,50 @@ const SetAppointment = () => {
     }
   };
 
+  // const timeSlots = Array.from({ length: 10 }, (_, i) => 8 + i)
+  //   .filter((hour) => hour !== 12)
+  //   .map((hour) => {
+  //     const suffix = hour >= 12 ? "PM" : "AM";
+  //     const formattedHour = hour > 12 ? hour - 12 : hour;
+  //     return `${formattedHour}:00 ${suffix}`;
+  //   });
+
+  // 1️⃣ Generate all time slots
+
   const timeSlots = Array.from({ length: 10 }, (_, i) => 8 + i)
-    .filter((hour) => hour !== 12)
+    .filter((hour) => hour !== 12) // skip 12 PM
     .map((hour) => {
       const suffix = hour >= 12 ? "PM" : "AM";
       const formattedHour = hour > 12 ? hour - 12 : hour;
       return `${formattedHour}:00 ${suffix}`;
     });
+
+  // 2️⃣ Compute available slots
+  const getAvailableSlots = () => {
+    if (!selectedDate) return [];
+
+    const dateKey = selectedDate.toISOString().split("T")[0];
+    const booked = bookings[dateKey] || [];
+
+    const now = new Date();
+    const isToday = now.toDateString() === selectedDate.toDateString();
+
+    return timeSlots.filter((slot) => {
+      if (booked.includes(slot)) return false;
+
+      if (isToday) {
+        const [time, meridian] = slot.split(" ");
+        let hour = parseInt(time.split(":")[0], 10);
+        if (meridian === "PM" && hour !== 12) hour += 12;
+        if (meridian === "AM" && hour === 12) hour = 0;
+        return hour > now.getHours();
+      }
+
+      return true;
+    });
+  };
+
+  const availableSlots = getAvailableSlots();
 
   useEffect(() => {
     if (!selectedDate) {
@@ -213,22 +258,19 @@ const SetAppointment = () => {
             <>
               <Text style={styles.label}>Available Time Slots</Text>
               <FlatList
-                data={timeSlots}
+                data={availableSlots}
                 keyExtractor={(item) => item}
                 numColumns={3}
                 columnWrapperStyle={{ justifyContent: "space-between" }}
                 contentContainerStyle={{ marginTop: 8 }}
                 renderItem={({ item }) => {
-                  const unavailable = isSlotUnavailable(item);
                   const selected = selectedTime === item;
 
                   return (
                     <Pressable
-                      disabled={unavailable}
                       style={[
                         styles.timeSlot,
                         selected && styles.timeSlotSelected,
-                        unavailable && styles.timeSlotUnavailable,
                       ]}
                       onPress={() => setSelectedTime(item)}
                     >
@@ -236,7 +278,6 @@ const SetAppointment = () => {
                         style={[
                           styles.timeText,
                           selected && styles.timeTextSelected,
-                          unavailable && styles.timeTextUnavailable,
                         ]}
                       >
                         {item}

@@ -5,7 +5,14 @@ import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const AppointmentDetails = () => {
   const params = useLocalSearchParams();
@@ -26,7 +33,17 @@ const AppointmentDetails = () => {
 
       <View style={styles.appointmentCard}>
         {/* Provider Info */}
-        <View style={styles.providerContainer}>
+        <Pressable
+          style={styles.providerContainer}
+          onPress={() => {
+            router.push({
+              pathname: "/other-user/profile",
+              params: {
+                pageId: params.providerId,
+              },
+            });
+          }}
+        >
           {params.providerAvatar ? (
             <Image
               source={{
@@ -62,7 +79,7 @@ const AppointmentDetails = () => {
               <Text style={styles.typeText}>{params.type}</Text>
             </View>
           </View>
-        </View>
+        </Pressable>
 
         {/* Appointment Details */}
         <View style={styles.detailRow}>
@@ -88,8 +105,8 @@ const AppointmentDetails = () => {
               params.status === "Upcoming"
                 ? { backgroundColor: "#E0F2FF" }
                 : params.status === "Completed"
-                ? { backgroundColor: "#E6FFED" }
-                : { backgroundColor: "#FFE6E6" },
+                  ? { backgroundColor: "#E6FFED" }
+                  : { backgroundColor: "#FFE6E6" },
             ]}
           >
             <Text
@@ -98,8 +115,8 @@ const AppointmentDetails = () => {
                 params.status === "Upcoming"
                   ? { color: Colors.primary }
                   : params.status === "Completed"
-                  ? { color: "green" }
-                  : { color: "red" },
+                    ? { color: "green" }
+                    : { color: "red" },
               ]}
             >
               {params.status}
