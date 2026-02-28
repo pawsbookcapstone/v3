@@ -10,7 +10,7 @@ import {
   Text,
   TextStyle,
   ToastAndroid,
-  View
+  View,
 } from "react-native";
 
 const test = async () => {
@@ -19,24 +19,29 @@ const test = async () => {
       resolve();
     }, 4000); // 4000ms = 4 seconds
   });
-}
+};
 
 export function useLoadingHook(showError?: boolean) {
   const [loading, setLoading] = useState(false);
+  const [loadingByKey, setLoadingByKey] = useState<{ [key: string]: boolean }>(
+    {},
+  );
   const spinValue = useRef(new Animated.Value(0)).current;
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // 🔄 handle animation lifecycle
   useEffect(() => {
-    if (loading) {
-      animationRef.current = Animated.loop(
-        Animated.timing(spinValue, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        })
-      );
-      animationRef.current.start();
+    if (loading || Object.values(loadingByKey).some((f) => f)) {
+      if (!(loading && Object.values(loadingByKey).some((f) => f))) {
+        animationRef.current = Animated.loop(
+          Animated.timing(spinValue, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        );
+        animationRef.current.start();
+      }
     } else {
       animationRef.current?.stop();
       spinValue.setValue(0);
@@ -45,7 +50,7 @@ export function useLoadingHook(showError?: boolean) {
     return () => {
       animationRef.current?.stop();
     };
-  }, [loading, spinValue]);
+  }, [loading, loadingByKey, spinValue]);
 
   const rotate = spinValue.interpolate({
     inputRange: [0, 1],
@@ -63,6 +68,7 @@ export function useLoadingHook(showError?: boolean) {
       loadingTextStyle,
       spinnerSize,
       spinnerColor,
+      key,
     }: {
       style?: any;
       onPress?: () => void | Promise<any>;
@@ -73,45 +79,55 @@ export function useLoadingHook(showError?: boolean) {
       spinnerSize?: number;
       spinnerColor?: string;
       disabled?: boolean;
+      key?: string;
     }) => {
+      const isLoading = key ? (loadingByKey[key] ?? false) : loading;
+
       const process = async () => {
-        if (loading) return;
+        if (isLoading) return;
 
         try {
-          setLoading(true);
-          if (onPress)
-            await onPress();
-          else await test()
+          if (key) setLoadingByKey((prev) => ({ ...prev, [key]: true }));
+          else setLoading(true);
+          if (onPress) await onPress();
+          else await test();
         } catch (e: any) {
-          if (!showError) return
-          
+          if (!showError) return;
+
           if (Platform.OS === "android") {
             ToastAndroid.showWithGravity(
               e ?? "Something went wrong",
               ToastAndroid.LONG,
-              ToastAndroid.BOTTOM
+              ToastAndroid.BOTTOM,
             );
-          }
-          else {
-            Alert.alert("Error", e ?? "Something went wrong")
+          } else {
+            Alert.alert("Error", e ?? "Something went wrong");
           }
         } finally {
-          setLoading(false);
+          if (key) setLoadingByKey((prev) => ({ ...prev, [key]: false }));
+          else setLoading(false);
         }
       };
 
       return (
         <Pressable
           onPress={process}
-          disabled={loading || disabled}
-          style={[style, loading && styles.disabled]}
+          disabled={isLoading || disabled}
+          style={[style, isLoading && styles.disabled]}
         >
-          {loading ? (
+          {isLoading ? (
             <View style={styles.content}>
               <Animated.View style={{ transform: [{ rotate }] }}>
-                <Loader2 size={spinnerSize ?? 18} color={spinnerColor ?? "#fff"} />
+                <Loader2
+                  size={spinnerSize ?? 18}
+                  color={spinnerColor ?? "#fff"}
+                />
               </Animated.View>
-              {!hideLoadingText && <Text style={[styles.buttonText, loadingTextStyle]}>{loadingText ?? 'Please wait...'}</Text>}
+              {!hideLoadingText && (
+                <Text style={[styles.buttonText, loadingTextStyle]}>
+                  {loadingText ?? "Please wait..."}
+                </Text>
+              )}
             </View>
           ) : (
             children
@@ -119,7 +135,7 @@ export function useLoadingHook(showError?: boolean) {
         </Pressable>
       );
     },
-    [loading, rotate, showError]
+    [loading, loadingByKey, rotate, showError],
   );
 
   return renderLoadingButton;

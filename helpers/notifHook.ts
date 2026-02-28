@@ -10,6 +10,7 @@ export type NotifType =
   | "Confirm Friend Request"
   | "Sent a Message"
   | "Sent a Image"
+  | "Sent a Video"
   | "Share";
 
 type Notif = {

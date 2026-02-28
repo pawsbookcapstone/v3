@@ -1,51 +1,28 @@
+import RenderPost from "@/app/usable/render-posts";
 import { useAppContext } from "@/AppsProvider";
-import PostDropdown from "@/components/modals/PostDropdown";
-import ReportPostModal from "@/components/modals/ReportPostModal";
 import {
-  add,
   all,
   collectionGroupName,
-  collectionName,
   find,
   get,
   orderBy,
-  remove,
-  serverTimestamp,
-  update,
   where,
 } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
-import { savePost } from "@/helpers/savedItems";
 import { computeTimePassed } from "@/helpers/timeConverter";
 import { useNotificationHook } from "@/hooks/notificationHook";
-import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
-import SkeletonPost from "@/shared/components/SkeletalLoader";
 import { screens } from "@/shared/styles/styles";
-import { Post } from "@/shared/Types/PostType";
-import {
-  Feather,
-  FontAwesome,
-  FontAwesome5,
-  Ionicons,
-} from "@expo/vector-icons";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
   Dimensions,
-  findNodeHandle,
-  FlatList,
   Image,
-  Modal,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
-  ToastAndroid,
-  TouchableOpacity,
-  UIManager,
   View,
 } from "react-native";
 
@@ -72,66 +49,6 @@ const Home = () => {
 
   const addNotif = useNotifHook();
   const hasNotif = useNotificationHook();
-
-  // const onRefresh = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const friendsSnap = await get("friends").where(
-  //       where("users", "array-contains", userId),
-  //       where("confirmed", "==", true),
-  //     );
-  //     const friend_ids = friendsSnap.docs.map((d) => {
-  //       const t = d.data();
-  //       return t.users[0] === userId ? t.users[1] : t.users[0];
-  //     });
-  //     friend_ids.push(userId);
-
-  //     const snap = await get("posts").where(
-  //       where("creator_id", "in", friend_ids),
-  //       orderBy("date", "desc"),
-  //     );
-  //     const _posts: any = [];
-
-  //     for (const i in snap.docs) {
-  //       const dc = snap.docs[i];
-  //       const d = dc.data();
-
-  //       let shared = null
-  //       if (d.shared_post_id){
-  //         const shareSnap = (await find('posts', d.shared_post_id))
-  //         shared = shareSnap.data()
-  //       }
-
-  //       const commentSnap = await all("posts", dc.id, "comments");
-  //       _posts.push({
-  //         id: dc.id,
-  //         ...d,
-  //         liked: Array.isArray(d.liked_by_ids)
-  //           ? d.liked_by_ids.includes(userId)
-  //           : false,
-  //         shared:shared,
-  //         showComments: false,
-  //         comments: commentSnap.docs.map((_comment: any) => ({
-  //           id: _comment.id,
-  //           ..._comment.data(),
-  //         })),
-  //         date_ago: computeTimePassed(d.date.toDate()),
-  //       });
-
-  //     }
-
-  //     setPosts(_posts);
-  //   } finally {
-  //     // catch (e) {
-  //     //   Alert.alert("Error", e + "");
-  //     // }
-  //     setLoading(false);
-  //   }
-  //   // setTimeout(() => {
-  //   //   setPosts([]);
-  //   //   setLoading(false);
-  //   // }, 1500);
-  // };
 
   const onRefreshFriendsOrFollowedOnly = async () => {
     if (!userId) return;
@@ -232,115 +149,115 @@ const Home = () => {
     }
   };
 
-  const onRefresh = async () => {
-    if (!userId) return;
+  // const onRefresh = async () => {
+  //   if (!userId) return;
 
-    setLoading(true);
+  //   setLoading(true);
 
-    try {
-      const connectedIds: string[] = [];
+  //   try {
+  //     const connectedIds: string[] = [];
 
-      const following = await collectionGroupName("followers")
-        .whereEquals("follower_id", userId)
-        .get();
+  //     const following = await collectionGroupName("followers")
+  //       .whereEquals("follower_id", userId)
+  //       .get();
 
-      const pageIds = following.docs.map((d) => d.ref.parent.parent?.id ?? "");
-      connectedIds.push(...pageIds);
+  //     const pageIds = following.docs.map((d) => d.ref.parent.parent?.id ?? "");
+  //     connectedIds.push(...pageIds);
 
-      if (!isPage) {
-        // 1️⃣ Fetch friends
-        const friendsSnap = await get("friends").where(
-          where("users", "array-contains", userId),
-          where("confirmed", "==", true),
-        );
+  //     if (!isPage) {
+  //       // 1️⃣ Fetch friends
+  //       const friendsSnap = await get("friends").where(
+  //         where("users", "array-contains", userId),
+  //         where("confirmed", "==", true),
+  //       );
 
-        const friendIds = friendsSnap.docs.map((d) => {
-          const { users } = d.data();
-          return users[0] === userId ? users[1] : users[0];
-        });
-        connectedIds.push(...friendIds);
-      }
+  //       const friendIds = friendsSnap.docs.map((d) => {
+  //         const { users } = d.data();
+  //         return users[0] === userId ? users[1] : users[0];
+  //       });
+  //       connectedIds.push(...friendIds);
+  //     }
 
-      const postSnaps = isPage
-        ? await collectionName("posts")
-            .whereEquals("creator_is_page", true)
-            .orderByDesc("date")
-            .get()
-        : await collectionName("posts").orderByDesc("date").get();
+  //     const postSnaps = isPage
+  //       ? await collectionName("posts")
+  //           .whereEquals("creator_is_page", true)
+  //           .orderByDesc("date")
+  //           .get()
+  //       : await collectionName("posts").orderByDesc("date").get();
 
-      const finalPosts = postSnaps.docs.filter((v) => {
-        const d = v.data();
+  //     const finalPosts = postSnaps.docs.filter((v) => {
+  //       const d = v.data();
 
-        if (d.visibility === "Only Me" && d.creator_id !== userId) return false;
-        if (
-          d.visibility === "Friends Only" &&
-          d.creator_id !== userId &&
-          !connectedIds.some((s) => s === d.creator_id)
-        )
-          return false;
-        return true;
-      });
+  //       if (d.visibility === "Only Me" && d.creator_id !== userId) return false;
+  //       if (
+  //         d.visibility === "Friends Only" &&
+  //         d.creator_id !== userId &&
+  //         !connectedIds.some((s) => s === d.creator_id)
+  //       )
+  //         return false;
+  //       return true;
+  //     });
 
-      // 3️⃣ Collect shared post IDs
-      const sharedIds = [
-        ...new Set(
-          finalPosts.map((d) => d.data().shared_post_id).filter(Boolean),
-        ),
-      ];
+  //     // 3️⃣ Collect shared post IDs
+  //     const sharedIds = [
+  //       ...new Set(
+  //         finalPosts.map((d) => d.data().shared_post_id).filter(Boolean),
+  //       ),
+  //     ];
 
-      // 4️⃣ Fetch shared posts in parallel
-      const sharedMap: Record<string, any> = {};
-      await Promise.all(
-        sharedIds.map(async (id: any) => {
-          const snap = await find("posts", id);
-          if (snap.exists()) sharedMap[id] = snap.data();
-        }),
-      );
+  //     // 4️⃣ Fetch shared posts in parallel
+  //     const sharedMap: Record<string, any> = {};
+  //     await Promise.all(
+  //       sharedIds.map(async (id: any) => {
+  //         const snap = await find("posts", id);
+  //         if (snap.exists()) sharedMap[id] = snap.data();
+  //       }),
+  //     );
 
-      // 5️⃣ Fetch comments in parallel
-      const commentsMap: Record<string, any[]> = {};
-      await Promise.all(
-        finalPosts.map(async (dc: any) => {
-          const commentSnap = await all("posts", dc.id, "comments");
-          commentsMap[dc.id] = commentSnap.docs.map((c: any) => ({
-            id: c.id,
-            ...c.data(),
-          }));
-        }),
-      );
+  //     // 5️⃣ Fetch comments in parallel
+  //     const commentsMap: Record<string, any[]> = {};
+  //     await Promise.all(
+  //       finalPosts.map(async (dc: any) => {
+  //         const commentSnap = await all("posts", dc.id, "comments");
+  //         commentsMap[dc.id] = commentSnap.docs.map((c: any) => ({
+  //           id: c.id,
+  //           ...c.data(),
+  //         }));
+  //       }),
+  //     );
 
-      // 6️⃣ Build final posts
-      const _posts = finalPosts.map((dc: any) => {
-        const d = dc.data();
+  //     // 6️⃣ Build final posts
+  //     const _posts = finalPosts.map((dc: any) => {
+  //       const d = dc.data();
 
-        return {
-          id: dc.id,
-          ...d,
-          liked: Array.isArray(d.liked_by_ids)
-            ? d.liked_by_ids.includes(userId)
-            : false,
-          shared: d.shared_post_id ? sharedMap[d.shared_post_id] : null,
-          showComments: false,
-          comments: commentsMap[dc.id] ?? [],
-          date_ago: computeTimePassed(d.date.toDate()),
-        };
-      });
+  //       return {
+  //         id: dc.id,
+  //         ...d,
+  //         liked: Array.isArray(d.liked_by_ids)
+  //           ? d.liked_by_ids.includes(userId)
+  //           : false,
+  //         shared: d.shared_post_id ? sharedMap[d.shared_post_id] : null,
+  //         showComments: false,
+  //         comments: commentsMap[dc.id] ?? [],
+  //         date_ago: computeTimePassed(d.date.toDate()),
+  //       };
+  //     });
 
-      setPosts(_posts);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     setPosts(_posts);
+  //   } catch (e) {
+  //     console.error(e);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  useOnFocusHook(() => {
-    onRefresh();
+  // useOnFocusHook(() => {
+  //   onRefresh();
 
-    return () => {
-      setShowDropdown(false);
-    };
-  }, [userId]);
+  //   return () => {
+  //     setShowDropdown(false);
+  //   };
+  // }, [userId]);
   // useEffect(() => {
   //   onRefresh();
   //   // setTimeout(() => {
@@ -361,540 +278,540 @@ const Home = () => {
   //   }
   // }, [newPost]);
 
-  const toggleLike = async (id: string) => {
-    setPosts((posts: any[]) =>
-      posts.map((p: any) => {
-        if (p.id !== id) return p;
+  // const toggleLike = async (id: string) => {
+  //   setPosts((posts: any[]) =>
+  //     posts.map((p: any) => {
+  //       if (p.id !== id) return p;
 
-        const isLiking = !p.liked;
+  //       const isLiking = !p.liked;
 
-        let liked_by_ids = [];
+  //       let liked_by_ids = [];
 
-        if (!p.liked_by_ids) {
-          liked_by_ids = [userId];
-        } else {
-          liked_by_ids = p.liked
-            ? p.liked_by_ids.filter((l: string) => l !== userId)
-            : [...p.liked_by_ids, userId];
-        }
+  //       if (!p.liked_by_ids) {
+  //         liked_by_ids = [userId];
+  //       } else {
+  //         liked_by_ids = p.liked
+  //           ? p.liked_by_ids.filter((l: string) => l !== userId)
+  //           : [...p.liked_by_ids, userId];
+  //       }
 
-        // 🔥 Update Firestore
-        update("posts", id).value({ liked_by_ids });
+  //       // 🔥 Update Firestore
+  //       update("posts", id).value({ liked_by_ids });
 
-        // 🔔 SEND NOTIFICATION (only if liking)
-        if (isLiking) {
-          addNotif({
-            receiver_id: p.creator_id,
-            href: "/pet-owner/profile",
-            type: "Like",
-          });
-          // notifyLikePost({
-          //   toUserId: id, // post owner
-          //   fromUserId: userId,
-          //   name: userName,
-          //   profile: userImagePath,
-          //   postId: id,
-          // });
-        }
+  //       // 🔔 SEND NOTIFICATION (only if liking)
+  //       if (isLiking) {
+  //         addNotif({
+  //           receiver_id: p.creator_id,
+  //           href: "/pet-owner/profile",
+  //           type: "Like",
+  //         });
+  //         // notifyLikePost({
+  //         //   toUserId: id, // post owner
+  //         //   fromUserId: userId,
+  //         //   name: userName,
+  //         //   profile: userImagePath,
+  //         //   postId: id,
+  //         // });
+  //       }
 
-        return {
-          ...p,
-          liked_by_ids,
-          liked: isLiking,
-        };
-      }),
-    );
-  };
-
-  const toggleComments = (id: string) => {
-    setComment("");
-    setPosts((prev: any) =>
-      prev.map((p: any) =>
-        p.id === id ? { ...p, showComments: !p.showComments } : p,
-      ),
-    );
-  };
-
-  const handleAddComment = (postId: string) => {
-    // const text = commentInputs[postId]?.trim();
-    // if (!text) return;
-
-    const data = {
-      commented_by_id: userId,
-      commented_by_name: userName,
-      commented_by_img_path: userImagePath ?? null,
-      message: comment,
-      date: serverTimestamp(),
-    };
-
-    add("posts", postId, "comments").value(data);
-
-    setPosts((prev: any) =>
-      prev.map((p: any) => {
-        if (p.id !== postId) return p;
-
-        addNotif({
-          receiver_id: p.creator_id,
-          href: "/pet-owner/(menu)/profile",
-          type: "Comment",
-        });
-
-        return {
-          ...p,
-          comments: [...p.comments, data],
-        };
-      }),
-    );
-    setComment("");
-
-    // setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
-  };
-
-  const handleShare = (post: Post) => {
-    // Increment share count
-    // setPosts((prev) =>
-    //   prev.map((p) =>
-    //     p.id === post.id ? { ...p, sharesCount: p.sharesCount + 1 } : p
-    //   )
-    // );
-    // Navigate to share-post screen and pass full post data
-    router.push({
-      pathname: "/usable/share-post",
-      params: { post: JSON.stringify(post) },
-    });
-  };
-
-  const openDropdown = (event: any, postId: string) => {
-    const handle = findNodeHandle(event.target);
-    if (handle) {
-      UIManager.measure(handle, (_x, _y, _w, _h, pageX, pageY) => {
-        setDropdownPos({ x: pageX, y: pageY + 20 });
-        setSelectedPostId(postId);
-        setShowDropdown(true);
-      });
-    }
-  };
-  const handleFollow = (postId: string) => {
-    setPosts((prev: any) =>
-      prev.map((p: any) => (p.id === postId ? { ...p, isFollowing: true } : p)),
-    );
-    ToastAndroid.show("You are now following this page!", ToastAndroid.SHORT);
-  };
-
-  const handleSavePost = async (postId: string, _unSavedId: string | null) => {
-    const selectedPost = posts.find((p: any) => p.id === selectedPostId);
-    //  console.log("saved",  JSON.stringify(selectedPost))
-    if (_unSavedId) remove("users", userId, "savedItems", _unSavedId);
-    else
-      await savePost(userId, {
-        id: selectedPostId as string,
-        caption: selectedPost.body,
-        images: selectedPost.img_paths,
-        ownerId: selectedPost.creator_id,
-        ownerName: selectedPost.creator_name,
-        ownerImage: selectedPost.creator_img_path,
-        saveCategory: "posts",
-        postCreatedAt: selectedPost.date,
-      });
-
-    // add("users", userId, "savedItems").value({
-    //   saved_id: postId,
-    //   saved_at: serverTimestamp(),
-    //   is_post: true,
-    // });
-  };
-
-  const handleSeeProfile = (post: any) => {
-    if (post.creator_id === userId) {
-      if (!post.creator_is_page) router.push("/pet-owner/profile");
-      else
-        router.push({
-          pathname: "/other-user/profile",
-          params: {
-            pageId: post.creator_id,
-          },
-        });
-      return;
-    }
-
-    if (post.creator_is_page)
-      router.push({
-        pathname: "/other-user/profile",
-        params: {
-          pageId: post.creator_id,
-        },
-      });
-    else
-      router.push({
-        pathname: "/usable/user-profile",
-        params: { userToViewId: post.creator_id },
-      });
-  };
-
-  // const handleReport = (postId: string) => {
-  //   setSelectedPostId(postId);
-  //   setReportModalVisible(true);
+  //       return {
+  //         ...p,
+  //         liked_by_ids,
+  //         liked: isLiking,
+  //       };
+  //     }),
+  //   );
   // };
-  const deletePost = (postId: string) => {
-    try {
-      // Delete from Firestore
-      remove("posts", postId); // or deleteDoc(doc(db, "posts", postId));
 
-      // Update local state
-      setPosts((prev: any) => prev.filter((p: any) => p.id !== postId));
+  // const toggleComments = (id: string) => {
+  //   setComment("");
+  //   setPosts((prev: any) =>
+  //     prev.map((p: any) =>
+  //       p.id === id ? { ...p, showComments: !p.showComments } : p,
+  //     ),
+  //   );
+  // };
 
-      // Feedback
-      ToastAndroid.show("Post deleted", ToastAndroid.SHORT);
-    } catch (e) {
-      console.log("Failed to delete post:", e);
-      Alert.alert("Error", "Failed to delete post");
-    }
-  };
+  // const handleAddComment = (postId: string) => {
+  //   // const text = commentInputs[postId]?.trim();
+  //   // if (!text) return;
 
-  //for report
-  const handleReport = (reason: any) => {
-    const dataReport = {
-      reporterName: userName,
-      reporterImg: userImagePath,
-      postId: selectedPostId,
-      reason: reason,
-      status: "pending",
-      time: serverTimestamp(),
-      type: "post",
-    };
-    add("reported-post").value(dataReport);
-  };
+  //   const data = {
+  //     commented_by_id: userId,
+  //     commented_by_name: userName,
+  //     commented_by_img_path: userImagePath ?? null,
+  //     message: comment,
+  //     date: serverTimestamp(),
+  //   };
 
-  const renderShared = (item: any) => {
-    const maxImagesToShow = 3;
-    const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
+  //   add("posts", postId, "comments").value(data);
 
-    return (
-      <View style={styles.sharedPostCard}>
-        <View style={styles.postHeader}>
-          <Pressable
-            style={{ flexDirection: "row", alignItems: "center" }}
-            onPress={() => handleSeeProfile(item)}
-          >
-            {item.creator_img_path ? (
-              <Image
-                source={{ uri: item.creator_img_path }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.profileImage} />
-            )}
+  //   setPosts((prev: any) =>
+  //     prev.map((p: any) => {
+  //       if (p.id !== postId) return p;
 
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginLeft: 8,
-                flex: 1,
-                gap: 10,
-              }}
-            >
-              <View>
-                <Text style={styles.userName}>{item.creator_name}</Text>
-                <Text style={styles.postTime}>{item.date_ago}</Text>
-              </View>
-            </View>
-          </Pressable>
-        </View>
+  //       addNotif({
+  //         receiver_id: p.creator_id,
+  //         href: "/pet-owner/(menu)/profile",
+  //         type: "Comment",
+  //       });
 
-        {/* Content */}
-        <Text style={styles.postContent}>{item.body}</Text>
+  //       return {
+  //         ...p,
+  //         comments: [...p.comments, data],
+  //       };
+  //     }),
+  //   );
+  //   setComment("");
 
-        {/* Tagged Pets */}
-        {item.pets && item.pets.length > 0 && (
-          <View style={styles.taggedPetsContainer}>
-            {item.pets.map((pet: any) => (
-              <TouchableOpacity
-                key={pet.id}
-                style={styles.petChip}
-                onPress={() => console.log("Go to pet profile:", pet.name)}
-              >
-                {pet.img_path ? (
-                  <Image
-                    source={{ uri: pet.img_path }}
-                    style={styles.petAvatar}
-                  />
-                ) : (
-                  <View style={styles.petAvatar} />
-                )}
-                <Text style={styles.petName}>{pet.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+  //   // setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+  // };
 
-        {/* Images Grid */}
-        {item.img_paths && item.img_paths.length > 0 && (
-          <View style={styles.imageGrid}>
-            {item.img_paths
-              .slice(0, maxImagesToShow)
-              .map((img: any, idx: number) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.imageWrapper}
-                  onPress={() => {
-                    setSelectedPostImages(item.img_paths ?? []);
-                    setSelectedIndex(idx);
-                    setImageModalVisible(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Image
-                    source={{ uri: img }}
-                    style={styles.gridImage}
-                    resizeMode="cover"
-                  />
-                  {idx === maxImagesToShow - 1 && extraImages > 0 && (
-                    <View style={styles.overlay}>
-                      <Text style={styles.overlayText}>+{extraImages}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-          </View>
-        )}
-      </View>
-    );
-  };
+  // const handleShare = (post: Post) => {
+  //   // Increment share count
+  //   // setPosts((prev) =>
+  //   //   prev.map((p) =>
+  //   //     p.id === post.id ? { ...p, sharesCount: p.sharesCount + 1 } : p
+  //   //   )
+  //   // );
+  //   // Navigate to share-post screen and pass full post data
+  //   router.push({
+  //     pathname: "/usable/share-post",
+  //     params: { post: JSON.stringify(post) },
+  //   });
+  // };
 
-  const renderPost = ({ item }: any) => {
-    const maxImagesToShow = 3;
-    const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
+  // const openDropdown = (event: any, postId: string) => {
+  //   const handle = findNodeHandle(event.target);
+  //   if (handle) {
+  //     UIManager.measure(handle, (_x, _y, _w, _h, pageX, pageY) => {
+  //       setDropdownPos({ x: pageX, y: pageY + 20 });
+  //       setSelectedPostId(postId);
+  //       setShowDropdown(true);
+  //     });
+  //   }
+  // };
+  // const handleFollow = (postId: string) => {
+  //   setPosts((prev: any) =>
+  //     prev.map((p: any) => (p.id === postId ? { ...p, isFollowing: true } : p)),
+  //   );
+  //   ToastAndroid.show("You are now following this page!", ToastAndroid.SHORT);
+  // };
 
-    return (
-      <View style={styles.postCard}>
-        {/* Header */}
-        <View style={styles.postHeader}>
-          <Pressable
-            style={{ flexDirection: "row", alignItems: "center" }}
-            onPress={() => handleSeeProfile(item)}
-          >
-            {item.creator_img_path ? (
-              <Image
-                source={{ uri: item.creator_img_path }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.profileImage} />
-            )}
+  // const handleSavePost = async (postId: string, _unSavedId: string | null) => {
+  //   const selectedPost = posts.find((p: any) => p.id === selectedPostId);
+  //   //  console.log("saved",  JSON.stringify(selectedPost))
+  //   if (_unSavedId) remove("users", userId, "savedItems", _unSavedId);
+  //   else
+  //     await savePost(userId, {
+  //       id: selectedPostId as string,
+  //       caption: selectedPost.body,
+  //       images: selectedPost.img_paths,
+  //       ownerId: selectedPost.creator_id,
+  //       ownerName: selectedPost.creator_name,
+  //       ownerImage: selectedPost.creator_img_path,
+  //       saveCategory: "posts",
+  //       postCreatedAt: selectedPost.date,
+  //     });
 
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginLeft: 8,
-                flex: 1,
-                gap: 10,
-              }}
-            >
-              <View>
-                <Text style={styles.userName}>{item.creator_name}</Text>
-                <Text style={styles.postTime}>{item.date_ago}</Text>
-              </View>
+  //   // add("users", userId, "savedItems").value({
+  //   //   saved_id: postId,
+  //   //   saved_at: serverTimestamp(),
+  //   //   is_post: true,
+  //   // });
+  // };
 
-              {/* {item.isPage && !item.isFollowing && (
-                <Pressable
-                  onPress={() => handleFollow(item.id)}
-                  style={styles.followButton}
-                >
-                  <Text style={styles.followButtonText}>Follow</Text>
-                </Pressable>
-              )} */}
-            </View>
-          </Pressable>
+  // const handleSeeProfile = (post: any) => {
+  //   if (post.creator_id === userId) {
+  //     if (!post.creator_is_page) router.push("/pet-owner/profile");
+  //     else
+  //       router.push({
+  //         pathname: "/other-user/profile",
+  //         params: {
+  //           pageId: post.creator_id,
+  //         },
+  //       });
+  //     return;
+  //   }
 
-          <View style={{ position: "absolute", top: 10, right: 10 }}>
-            <TouchableOpacity onPress={(e) => openDropdown(e, item.id ?? "")}>
-              <Feather name="more-vertical" size={20} color="#555" />
-            </TouchableOpacity>
-          </View>
-        </View>
+  //   if (post.creator_is_page)
+  //     router.push({
+  //       pathname: "/other-user/profile",
+  //       params: {
+  //         pageId: post.creator_id,
+  //       },
+  //     });
+  //   else
+  //     router.push({
+  //       pathname: "/usable/user-profile",
+  //       params: { userToViewId: post.creator_id },
+  //     });
+  // };
 
-        {/* Content */}
-        <Text style={styles.postContent}>{item.body}</Text>
+  // // const handleReport = (postId: string) => {
+  // //   setSelectedPostId(postId);
+  // //   setReportModalVisible(true);
+  // // };
+  // const deletePost = (postId: string) => {
+  //   try {
+  //     // Delete from Firestore
+  //     remove("posts", postId); // or deleteDoc(doc(db, "posts", postId));
 
-        {/* Tagged Pets */}
-        {item.pets && item.pets.length > 0 && (
-          <View style={styles.taggedPetsContainer}>
-            {item.pets.map((pet: any) => (
-              <TouchableOpacity
-                key={pet.id}
-                style={styles.petChip}
-                onPress={() => console.log("Go to pet profile:", pet.name)}
-              >
-                {pet.img_path ? (
-                  <Image
-                    source={{ uri: pet.img_path }}
-                    style={styles.petAvatar}
-                  />
-                ) : (
-                  <View style={styles.petAvatar} />
-                )}
-                <Text style={styles.petName}>{pet.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        {/* If this is a shared post, show the embedded original post */}
-        {/* {item.sharedPost && (
-          <View style={styles.sharedPostContainer}>
-            <View>
-              <Image
-                source={{ uri: item.sharedPost.profileImage }}
-                style={styles.sharedProfileImage}
-              />
-              <View style={{ marginLeft: 10 }}>
-                <Text style={styles.sharedUserName}>
-                  {item.sharedPost.user}
-                </Text>
-                <Text style={styles.sharedPostTime}>
-                  {item.sharedPost.time}
-                </Text>
-              </View>
-            </View>
+  //     // Update local state
+  //     setPosts((prev: any) => prev.filter((p: any) => p.id !== postId));
 
-            {item.sharedPost.content ? (
-              <Text style={styles.sharedContent}>
-                {item.sharedPost.content}
-              </Text>
-            ) : null}
+  //     // Feedback
+  //     ToastAndroid.show("Post deleted", ToastAndroid.SHORT);
+  //   } catch (e) {
+  //     console.log("Failed to delete post:", e);
+  //     Alert.alert("Error", "Failed to delete post");
+  //   }
+  // };
 
-            {item.sharedPost.images?.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {item.sharedPost.images.map((img, idx) => (
-                  <Image
-                    key={idx}
-                    source={{ uri: img }}
-                    style={styles.sharedImage}
-                    resizeMode="cover"
-                  />
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        )} */}
+  // //for report
+  // const handleReport = (reason: any) => {
+  //   const dataReport = {
+  //     reporterName: userName,
+  //     reporterImg: userImagePath,
+  //     postId: selectedPostId,
+  //     reason: reason,
+  //     status: "pending",
+  //     time: serverTimestamp(),
+  //     type: "post",
+  //   };
+  //   add("reported-post").value(dataReport);
+  // };
 
-        {/* Images Grid */}
-        {item.img_paths && item.img_paths.length > 0 && (
-          <View style={styles.imageGrid}>
-            {item.img_paths
-              .slice(0, maxImagesToShow)
-              .map((img: any, idx: number) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.imageWrapper}
-                  onPress={() => {
-                    setSelectedPostImages(item.img_paths ?? []);
-                    setSelectedIndex(idx);
-                    setImageModalVisible(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Image
-                    source={{ uri: img }}
-                    style={styles.gridImage}
-                    resizeMode="cover"
-                  />
-                  {idx === maxImagesToShow - 1 && extraImages > 0 && (
-                    <View style={styles.overlay}>
-                      <Text style={styles.overlayText}>+{extraImages}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-          </View>
-        )}
+  // const renderShared = (item: any) => {
+  //   const maxImagesToShow = 3;
+  //   const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
 
-        {item.shared && renderShared(item.shared)}
+  //   return (
+  //     <View style={styles.sharedPostCard}>
+  //       <View style={styles.postHeader}>
+  //         <Pressable
+  //           style={{ flexDirection: "row", alignItems: "center" }}
+  //           onPress={() => handleSeeProfile(item)}
+  //         >
+  //           {item.creator_img_path ? (
+  //             <Image
+  //               source={{ uri: item.creator_img_path }}
+  //               style={styles.profileImage}
+  //             />
+  //           ) : (
+  //             <View style={styles.profileImage} />
+  //           )}
 
-        {/* Actions */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            onPress={() => toggleLike(item.id)}
-            style={styles.actionBtn}
-          >
-            <Ionicons
-              name={item.liked ? "heart-sharp" : "heart-outline"}
-              size={23}
-              color={item.liked ? "red" : "black"}
-            />
-            <Text style={styles.countText}>
-              {(item.liked_by_ids ?? []).length}
-            </Text>
-          </TouchableOpacity>
+  //           <View
+  //             style={{
+  //               flexDirection: "row",
+  //               alignItems: "center",
+  //               marginLeft: 8,
+  //               flex: 1,
+  //               gap: 10,
+  //             }}
+  //           >
+  //             <View>
+  //               <Text style={styles.userName}>{item.creator_name}</Text>
+  //               <Text style={styles.postTime}>{item.date_ago}</Text>
+  //             </View>
+  //           </View>
+  //         </Pressable>
+  //       </View>
 
-          <TouchableOpacity
-            onPress={() => toggleComments(item.id)}
-            style={styles.actionBtn}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color="black" />
-            <Text style={styles.countText}>{item.comments.length}</Text>
-          </TouchableOpacity>
+  //       {/* Content */}
+  //       <Text style={styles.postContent}>{item.body}</Text>
 
-          {/* ✅ Share Button */}
-          {item.creator_id !== userId && (
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => handleShare(item)}
-            >
-              <Image
-                source={require("../../../assets/images/share.png")}
-                style={{ width: 20, height: 20 }}
-              />
-              <Text style={styles.countText}>{item.shares}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+  //       {/* Tagged Pets */}
+  //       {item.pets && item.pets.length > 0 && (
+  //         <View style={styles.taggedPetsContainer}>
+  //           {item.pets.map((pet: any) => (
+  //             <TouchableOpacity
+  //               key={pet.id}
+  //               style={styles.petChip}
+  //               onPress={() => console.log("Go to pet profile:", pet.name)}
+  //             >
+  //               {pet.img_path ? (
+  //                 <Image
+  //                   source={{ uri: pet.img_path }}
+  //                   style={styles.petAvatar}
+  //                 />
+  //               ) : (
+  //                 <View style={styles.petAvatar} />
+  //               )}
+  //               <Text style={styles.petName}>{pet.name}</Text>
+  //             </TouchableOpacity>
+  //           ))}
+  //         </View>
+  //       )}
 
-        {/* Comments */}
-        {item.showComments && (
-          <View style={styles.commentSection}>
-            {item.comments.map((c: any, idx: number) => (
-              <View key={idx} style={styles.commentRow}>
-                {c.commented_by_img_path ? (
-                  <Image
-                    source={{ uri: c.commented_by_img_path }}
-                    style={styles.commentProfile}
-                  />
-                ) : (
-                  <View style={styles.commentProfile} />
-                )}
-                <View style={styles.commentBubble}>
-                  <Text style={styles.commentUser}>{c.commented_by_name}</Text>
-                  <Text style={styles.commentText}>{c.message}</Text>
-                </View>
-              </View>
-            ))}
+  //       {/* Images Grid */}
+  //       {item.img_paths && item.img_paths.length > 0 && (
+  //         <View style={styles.imageGrid}>
+  //           {item.img_paths
+  //             .slice(0, maxImagesToShow)
+  //             .map((img: any, idx: number) => (
+  //               <TouchableOpacity
+  //                 key={idx}
+  //                 style={styles.imageWrapper}
+  //                 onPress={() => {
+  //                   setSelectedPostImages(item.img_paths ?? []);
+  //                   setSelectedIndex(idx);
+  //                   setImageModalVisible(true);
+  //                 }}
+  //                 activeOpacity={0.8}
+  //               >
+  //                 <Image
+  //                   source={{ uri: img }}
+  //                   style={styles.gridImage}
+  //                   resizeMode="cover"
+  //                 />
+  //                 {idx === maxImagesToShow - 1 && extraImages > 0 && (
+  //                   <View style={styles.overlay}>
+  //                     <Text style={styles.overlayText}>+{extraImages}</Text>
+  //                   </View>
+  //                 )}
+  //               </TouchableOpacity>
+  //             ))}
+  //         </View>
+  //       )}
+  //     </View>
+  //   );
+  // };
 
-            <View style={styles.addCommentRow}>
-              <Image
-                source={{ uri: userImagePath }}
-                style={styles.commentProfile}
-              />
-              <TextInput
-                placeholder="Write a comment..."
-                style={styles.commentInput}
-                value={comment}
-                onChangeText={setComment}
-                // value={commentInputs[item.id] || ""}
-                // onChangeText={(text) =>
-                //   setCommentInputs((prev) => ({ ...prev, [item.id]: text }))
-                // }
-              />
-              <TouchableOpacity onPress={() => handleAddComment(item.id)}>
-                <Text style={styles.postCommentBtn}>Post</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
-    );
-  };
+  // const renderPost = ({ item }: any) => {
+  //   const maxImagesToShow = 3;
+  //   const extraImages = (item.img_paths ?? []).length - maxImagesToShow;
+
+  //   return (
+  //     <View style={styles.postCard}>
+  //       {/* Header */}
+  //       <View style={styles.postHeader}>
+  //         <Pressable
+  //           style={{ flexDirection: "row", alignItems: "center" }}
+  //           onPress={() => handleSeeProfile(item)}
+  //         >
+  //           {item.creator_img_path ? (
+  //             <Image
+  //               source={{ uri: item.creator_img_path }}
+  //               style={styles.profileImage}
+  //             />
+  //           ) : (
+  //             <View style={styles.profileImage} />
+  //           )}
+
+  //           <View
+  //             style={{
+  //               flexDirection: "row",
+  //               alignItems: "center",
+  //               marginLeft: 8,
+  //               flex: 1,
+  //               gap: 10,
+  //             }}
+  //           >
+  //             <View>
+  //               <Text style={styles.userName}>{item.creator_name}</Text>
+  //               <Text style={styles.postTime}>{item.date_ago}</Text>
+  //             </View>
+
+  //             {/* {item.isPage && !item.isFollowing && (
+  //               <Pressable
+  //                 onPress={() => handleFollow(item.id)}
+  //                 style={styles.followButton}
+  //               >
+  //                 <Text style={styles.followButtonText}>Follow</Text>
+  //               </Pressable>
+  //             )} */}
+  //           </View>
+  //         </Pressable>
+
+  //         <View style={{ position: "absolute", top: 10, right: 10 }}>
+  //           <TouchableOpacity onPress={(e) => openDropdown(e, item.id ?? "")}>
+  //             <Feather name="more-vertical" size={20} color="#555" />
+  //           </TouchableOpacity>
+  //         </View>
+  //       </View>
+
+  //       {/* Content */}
+  //       <Text style={styles.postContent}>{item.body}</Text>
+
+  //       {/* Tagged Pets */}
+  //       {item.pets && item.pets.length > 0 && (
+  //         <View style={styles.taggedPetsContainer}>
+  //           {item.pets.map((pet: any) => (
+  //             <TouchableOpacity
+  //               key={pet.id}
+  //               style={styles.petChip}
+  //               onPress={() => console.log("Go to pet profile:", pet.name)}
+  //             >
+  //               {pet.img_path ? (
+  //                 <Image
+  //                   source={{ uri: pet.img_path }}
+  //                   style={styles.petAvatar}
+  //                 />
+  //               ) : (
+  //                 <View style={styles.petAvatar} />
+  //               )}
+  //               <Text style={styles.petName}>{pet.name}</Text>
+  //             </TouchableOpacity>
+  //           ))}
+  //         </View>
+  //       )}
+  //       {/* If this is a shared post, show the embedded original post */}
+  //       {/* {item.sharedPost && (
+  //         <View style={styles.sharedPostContainer}>
+  //           <View>
+  //             <Image
+  //               source={{ uri: item.sharedPost.profileImage }}
+  //               style={styles.sharedProfileImage}
+  //             />
+  //             <View style={{ marginLeft: 10 }}>
+  //               <Text style={styles.sharedUserName}>
+  //                 {item.sharedPost.user}
+  //               </Text>
+  //               <Text style={styles.sharedPostTime}>
+  //                 {item.sharedPost.time}
+  //               </Text>
+  //             </View>
+  //           </View>
+
+  //           {item.sharedPost.content ? (
+  //             <Text style={styles.sharedContent}>
+  //               {item.sharedPost.content}
+  //             </Text>
+  //           ) : null}
+
+  //           {item.sharedPost.images?.length > 0 && (
+  //             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+  //               {item.sharedPost.images.map((img, idx) => (
+  //                 <Image
+  //                   key={idx}
+  //                   source={{ uri: img }}
+  //                   style={styles.sharedImage}
+  //                   resizeMode="cover"
+  //                 />
+  //               ))}
+  //             </ScrollView>
+  //           )}
+  //         </View>
+  //       )} */}
+
+  //       {/* Images Grid */}
+  //       {item.img_paths && item.img_paths.length > 0 && (
+  //         <View style={styles.imageGrid}>
+  //           {item.img_paths
+  //             .slice(0, maxImagesToShow)
+  //             .map((img: any, idx: number) => (
+  //               <TouchableOpacity
+  //                 key={idx}
+  //                 style={styles.imageWrapper}
+  //                 onPress={() => {
+  //                   setSelectedPostImages(item.img_paths ?? []);
+  //                   setSelectedIndex(idx);
+  //                   setImageModalVisible(true);
+  //                 }}
+  //                 activeOpacity={0.8}
+  //               >
+  //                 <Image
+  //                   source={{ uri: img }}
+  //                   style={styles.gridImage}
+  //                   resizeMode="cover"
+  //                 />
+  //                 {idx === maxImagesToShow - 1 && extraImages > 0 && (
+  //                   <View style={styles.overlay}>
+  //                     <Text style={styles.overlayText}>+{extraImages}</Text>
+  //                   </View>
+  //                 )}
+  //               </TouchableOpacity>
+  //             ))}
+  //         </View>
+  //       )}
+
+  //       {item.shared && renderShared(item.shared)}
+
+  //       {/* Actions */}
+  //       <View style={styles.actionsRow}>
+  //         <TouchableOpacity
+  //           onPress={() => toggleLike(item.id)}
+  //           style={styles.actionBtn}
+  //         >
+  //           <Ionicons
+  //             name={item.liked ? "heart-sharp" : "heart-outline"}
+  //             size={23}
+  //             color={item.liked ? "red" : "black"}
+  //           />
+  //           <Text style={styles.countText}>
+  //             {(item.liked_by_ids ?? []).length}
+  //           </Text>
+  //         </TouchableOpacity>
+
+  //         <TouchableOpacity
+  //           onPress={() => toggleComments(item.id)}
+  //           style={styles.actionBtn}
+  //         >
+  //           <Ionicons name="chatbubble-outline" size={20} color="black" />
+  //           <Text style={styles.countText}>{item.comments.length}</Text>
+  //         </TouchableOpacity>
+
+  //         {/* ✅ Share Button */}
+  //         {item.creator_id !== userId && (
+  //           <TouchableOpacity
+  //             style={styles.actionBtn}
+  //             onPress={() => handleShare(item)}
+  //           >
+  //             <Image
+  //               source={require("../../../assets/images/share.png")}
+  //               style={{ width: 20, height: 20 }}
+  //             />
+  //             <Text style={styles.countText}>{item.shares}</Text>
+  //           </TouchableOpacity>
+  //         )}
+  //       </View>
+
+  //       {/* Comments */}
+  //       {item.showComments && (
+  //         <View style={styles.commentSection}>
+  //           {item.comments.map((c: any, idx: number) => (
+  //             <View key={idx} style={styles.commentRow}>
+  //               {c.commented_by_img_path ? (
+  //                 <Image
+  //                   source={{ uri: c.commented_by_img_path }}
+  //                   style={styles.commentProfile}
+  //                 />
+  //               ) : (
+  //                 <View style={styles.commentProfile} />
+  //               )}
+  //               <View style={styles.commentBubble}>
+  //                 <Text style={styles.commentUser}>{c.commented_by_name}</Text>
+  //                 <Text style={styles.commentText}>{c.message}</Text>
+  //               </View>
+  //             </View>
+  //           ))}
+
+  //           <View style={styles.addCommentRow}>
+  //             <Image
+  //               source={{ uri: userImagePath }}
+  //               style={styles.commentProfile}
+  //             />
+  //             <TextInput
+  //               placeholder="Write a comment..."
+  //               style={styles.commentInput}
+  //               value={comment}
+  //               onChangeText={setComment}
+  //               // value={commentInputs[item.id] || ""}
+  //               // onChangeText={(text) =>
+  //               //   setCommentInputs((prev) => ({ ...prev, [item.id]: text }))
+  //               // }
+  //             />
+  //             <TouchableOpacity onPress={() => handleAddComment(item.id)}>
+  //               <Text style={styles.postCommentBtn}>Post</Text>
+  //             </TouchableOpacity>
+  //           </View>
+  //         </View>
+  //       )}
+  //     </View>
+  //   );
+  // };
 
   return (
     <View style={[screens.screen, { backgroundColor: Colors.background }]}>
@@ -968,35 +885,36 @@ const Home = () => {
       </View>
 
       {/* Posts */}
-      {loading ? (
+      {/* {loading ? (
         <FlatList
           data={[1, 2, 3, 4]}
           showsVerticalScrollIndicator={false}
           keyExtractor={(item) => item.toString()}
           renderItem={() => <SkeletonPost />}
         />
-      ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPost}
-          contentContainerStyle={{ paddingBottom: 80, flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          ListEmptyComponent={() => (
-            <View style={{ flex: 1, alignItems: "center", marginTop: 50 }}>
-              <FontAwesome5 name="pager" size={20} color="gray" />
-              <Text style={{ color: "gray", fontSize: 12 }}>
-                No posts yet. Be the first to share something!
-              </Text>
-            </View>
-          )}
-        />
-      )}
+      ) : ( */}
+      <RenderPost />
+      {/* // <FlatList
+        //   data={posts}
+        //   keyExtractor={(item) => item.id}
+        //   renderItem={renderPost}
+        //   contentContainerStyle={{ paddingBottom: 80, flexGrow: 1 }}
+        //   showsVerticalScrollIndicator={false}
+        //   refreshing={refreshing}
+        //   onRefresh={onRefresh}
+        //   ListEmptyComponent={() => (
+        //     <View style={{ flex: 1, alignItems: "center", marginTop: 50 }}>
+        //       <FontAwesome5 name="pager" size={20} color="gray" />
+        //       <Text style={{ color: "gray", fontSize: 12 }}>
+        //         No posts yet. Be the first to share something!
+        //       </Text>
+        //     </View>
+        //   )}
+        // />
+      // )} */}
 
       {/* Modal viewer with swipe */}
-      {imageModalVisible && (
+      {/* {imageModalVisible && (
         <Modal visible={imageModalVisible} transparent={true}>
           <View style={styles.modalBackground}>
             <FlatList
@@ -1087,7 +1005,7 @@ const Home = () => {
 
           setReportModalVisible(false);
         }}
-      />
+      /> */}
     </View>
   );
 };

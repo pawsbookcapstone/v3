@@ -1,8 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
 import {
   add,
-  all,
-  collectionName,
   count,
   find,
   get,
@@ -13,7 +11,6 @@ import {
 } from "@/helpers/db";
 import { generateChatId } from "@/helpers/helper";
 import { useNotifHook } from "@/helpers/notifHook";
-import { computeTimePassed } from "@/helpers/timeConverter";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -38,10 +35,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import RenderPost from "./render-posts";
 
 const Profile = () => {
   const { userId, userName, userImagePath, isPage } = useAppContext();
@@ -171,14 +168,14 @@ const Profile = () => {
         /** =========================
          *  PARALLEL BASE QUERIES
          ========================== */
-        const [userSnap, blockSnap, postsSnap] = await Promise.all([
+        const [userSnap, blockSnap] = await Promise.all([
           find("users", userToViewId),
           find("users", userId, "blocked_users", userToViewId),
-          collectionName("posts")
-            .whereEquals("creator_id", userToViewId)
-            .whereNotEquals("visibility", "Only Me")
-            .orderByDesc("date")
-            .get(),
+          // collectionName("posts")
+          //   .whereEquals("creator_id", userToViewId)
+          //   .whereNotEquals("visibility", "Only Me")
+          //   .orderByDesc("date")
+          //   .get(),
         ]);
 
         if (!mounted) return;
@@ -244,35 +241,35 @@ const Profile = () => {
         /** =========================
          *  POSTS OPTIMIZATION
          ========================== */
-        const posts = await Promise.all(
-          postsSnap.docs.map(async (dc) => {
-            const d = dc.data();
+        // const posts = await Promise.all(
+        //   postsSnap.docs.map(async (dc) => {
+        //     const d = dc.data();
 
-            const [sharedSnap, commentsSnap] = await Promise.all([
-              d.shared_post_id
-                ? find("posts", d.shared_post_id)
-                : Promise.resolve(null),
-              all("posts", dc.id, "comments"),
-            ]);
+        //     const [sharedSnap, commentsSnap] = await Promise.all([
+        //       d.shared_post_id
+        //         ? find("posts", d.shared_post_id)
+        //         : Promise.resolve(null),
+        //       all("posts", dc.id, "comments"),
+        //     ]);
 
-            return {
-              id: dc.id,
-              ...d,
-              liked: Array.isArray(d.liked_by_ids)
-                ? d.liked_by_ids.includes(userId)
-                : false,
-              showComments: false,
-              shared: sharedSnap?.data() ?? null,
-              comments: commentsSnap.docs.map((c) => ({
-                id: c.id,
-                ...c.data(),
-              })),
-              date_ago: computeTimePassed(d.date.toDate()),
-            };
-          }),
-        );
+        //     return {
+        //       id: dc.id,
+        //       ...d,
+        //       liked: Array.isArray(d.liked_by_ids)
+        //         ? d.liked_by_ids.includes(userId)
+        //         : false,
+        //       showComments: false,
+        //       shared: sharedSnap?.data() ?? null,
+        //       comments: commentsSnap.docs.map((c) => ({
+        //         id: c.id,
+        //         ...c.data(),
+        //       })),
+        //       date_ago: computeTimePassed(d.date.toDate()),
+        //     };
+        //   }),
+        // );
 
-        if (mounted) setPosts(posts);
+        // if (mounted) setPosts(posts);
       } catch (err) {
         console.error(err);
       } finally {
@@ -863,133 +860,7 @@ const Profile = () => {
 
           {/* --- Posts Section --- */}
           <View style={styles.postsSection}>
-            {posts.map((post: any) => {
-              const maxImagesToShow = 3;
-              const extraImages =
-                post.img_paths && post.img_paths.length > maxImagesToShow
-                  ? post.img_paths.length - maxImagesToShow
-                  : 0;
-              return (
-                <View key={post.id} style={styles.postCard}>
-                  {/* Header */}
-                  <View style={styles.postHeader}>
-                    <Image
-                      source={{ uri: post.creator_img_path }}
-                      style={styles.postProfile}
-                    />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.userName}>{post.creator_name}</Text>
-                      <Text style={styles.postTime}>{post.time}</Text>
-                    </View>
-                    {/* <Entypo
-                      name="dots-three-horizontal"
-                      size={18}
-                      color={Colors.gray}
-                    /> */}
-                  </View>
-
-                  {/* Content */}
-                  <Text style={styles.postContent}>{post.body}</Text>
-
-                  {post.img_paths && post.img_paths.length > 0 && (
-                    <View style={styles.imageGrid}>
-                      {post.img_paths
-                        .slice(0, maxImagesToShow)
-                        .map((img: any, idx: any) => (
-                          <TouchableOpacity
-                            key={idx}
-                            style={styles.imageWrapper}
-                            onPress={() => openImageModal(post.img_paths, idx)}
-                            activeOpacity={0.8}
-                          >
-                            <Image
-                              source={{ uri: img }}
-                              style={styles.gridImage}
-                              resizeMode="cover"
-                            />
-                            {idx === maxImagesToShow - 1 && extraImages > 0 && (
-                              <View style={styles.overlay}>
-                                <Text style={styles.overlayText}>
-                                  +{extraImages}
-                                </Text>
-                              </View>
-                            )}
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  )}
-
-                  {post.shared && renderShared(post.shared)}
-
-                  {/* Footer */}
-                  <View style={styles.postFooter}>
-                    <Pressable
-                      style={styles.actionBtn}
-                      onPress={() => toggleLike(post.id)}
-                    >
-                      <Ionicons
-                        name={post.liked ? "heart-sharp" : "heart-outline"}
-                        size={23}
-                        color={post.liked ? "red" : "black"}
-                      />
-                      <Text style={styles.countText}>
-                        {(post.liked_by_ids ?? []).length}
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.actionBtn}
-                      onPress={() => toggleComments(post.id)}
-                    >
-                      <Ionicons
-                        name="chatbubble-outline"
-                        size={20}
-                        color="black"
-                      />
-                      <Text style={styles.countText}>
-                        {post.comments.length}
-                      </Text>
-                    </Pressable>
-                  </View>
-
-                  {/* Comments */}
-                  {post.showComments && (
-                    <View style={styles.commentSection}>
-                      {post.comments.map((c: any, idx: number) => (
-                        <View key={idx} style={styles.commentRow}>
-                          <Image
-                            source={{ uri: c.profileImage }}
-                            style={styles.commentProfile}
-                          />
-                          <View style={styles.commentBubble}>
-                            <Text style={styles.commentUser}>
-                              {c.commented_by_name}
-                            </Text>
-                            <Text style={styles.commentText}>{c.message}</Text>
-                          </View>
-                        </View>
-                      ))}
-
-                      <View style={styles.addCommentRow}>
-                        <Image
-                          source={{ uri: profile.img_path }}
-                          style={styles.commentProfile}
-                        />
-                        <TextInput
-                          placeholder="Write a comment..."
-                          style={styles.commentInput}
-                          value={comment}
-                          onChangeText={setComment}
-                        />
-                        <Pressable onPress={() => handleAddComment(post.id)}>
-                          <Text style={styles.postCommentBtn}>Post</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
+            <RenderPost userToViewProfileId={userToViewId} useMap={true} />
           </View>
         </ScrollView>
       )}

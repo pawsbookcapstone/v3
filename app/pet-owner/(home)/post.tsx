@@ -1,7 +1,8 @@
 import { useAppContext } from "@/AppsProvider";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { moderateImage, moderateText } from "@/helpers/AI/ai";
 import { SafetyStatus, Violation } from "@/helpers/AI/types";
-import { uploadImageUri } from "@/helpers/cloudinary";
+import { uploadAnyMedia } from "@/helpers/cloudinary";
 import { add, setUnMerged } from "@/helpers/db";
 import { useLoadingHook } from "@/hooks/loadingHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
@@ -16,7 +17,6 @@ import { serverTimestamp } from "firebase/firestore";
 import { Loader2 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
   Image,
   Keyboard,
   Modal,
@@ -31,7 +31,9 @@ import {
 } from "react-native";
 
 type ImageType = {
-  uri: string;
+  uri?: string;
+  media?: any;
+  is_video?: boolean;
   scanning?: boolean;
   errors?: Violation[];
   status?: SafetyStatus | undefined;
@@ -69,22 +71,33 @@ const PostScreen = () => {
 
     try {
       const post = JSON.parse(params.editPost as string);
+
       setEditPost(post);
       setContent(post.body || "");
       setVisibility(post.visibility || "Public");
       // setImages(post.img_paths || []);
       setTaggedPets(post.pets || []);
 
+      let medias: ImageType[] = [];
       if (post?.img_paths && post.img_paths.length > 0) {
-        const formattedImages: ImageType[] = post.img_paths.map(
-          (path: string) => ({
+        medias = post.img_paths.map((path: string) => ({
+          uri: path,
+          scanning: false,
+          status: SafetyStatus.SAFE,
+        }));
+      }
+      if (post?.video_paths && post.video_paths.length > 0) {
+        medias.push(
+          ...post.video_paths.map((path: string) => ({
             uri: path,
+            is_video: true,
             scanning: false,
             status: SafetyStatus.SAFE,
-          }),
+          })),
         );
-
-        setImages(formattedImages);
+      }
+      if (medias.length > 0) {
+        setImages(medias);
       }
     } catch (e) {
       console.warn("Invalid editPost param", e);
@@ -97,7 +110,7 @@ const PostScreen = () => {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
@@ -113,6 +126,7 @@ const PostScreen = () => {
 
   const takePhoto = async () => {
     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.7,
@@ -130,27 +144,54 @@ const PostScreen = () => {
     if (!USE_AI) {
       setImages((prev) => [
         ...prev,
-        { uri: asset.uri, scanning: false, status: SafetyStatus.SAFE },
+        {
+          media: asset,
+          uri: asset.uri,
+          scanning: false,
+          status: SafetyStatus.SAFE,
+          is_video: asset.type?.startsWith("video"),
+        },
       ]);
       return;
     }
 
     const dataUrl = `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`;
     const idx = images.length;
-    moderateImage(dataUrl).then((res) => {
-      console.log("Image AI Result: ", res);
+    moderateImage(dataUrl)
+      .then((res) => {
+        console.log("Image AI Result: ", res);
 
-      setImages((_images) => {
-        const img = _images[idx];
-        img.scanning = false;
-        img.status = res.status;
-        if (res.violations && res.violations.length > 0)
-          img.errors = res.violations;
-        return [..._images];
+        setImages((_images) => {
+          const img = _images[idx];
+          img.scanning = false;
+          img.status = res.status;
+          if (res.violations && res.violations.length > 0)
+            img.errors = res.violations;
+          return [..._images];
+        });
+      })
+      .catch((e) => {
+        setImages((_images) => {
+          const img = _images[idx];
+          img.scanning = false;
+          img.status = SafetyStatus.SAFE;
+          return [..._images];
+        });
+        ToastAndroid.show(
+          "AI validation is not available right now!!!",
+          ToastAndroid.SHORT,
+        );
       });
-    });
 
-    setImages((prev) => [...prev, { uri: asset.uri, scanning: true }]);
+    setImages((prev) => [
+      ...prev,
+      {
+        uri: asset.uri,
+        media: asset,
+        scanning: true,
+        is_video: asset.type?.startsWith("video"),
+      },
+    ]);
   };
 
   const handlePost = async () => {
@@ -179,7 +220,10 @@ const PostScreen = () => {
         }
       } catch (e) {
         console.log(e);
-        Alert.alert("Warning", "AI validation is not available right now!!!");
+        ToastAndroid.show(
+          "AI validation is not available right now!!!",
+          ToastAndroid.SHORT,
+        );
       }
     }
 
@@ -191,8 +235,10 @@ const PostScreen = () => {
       body: content.trim(),
       date: serverTimestamp(),
       visibility: visibility,
-      shares: 0,
+      shares: editPost?.shares ?? 0,
     };
+
+    if (editPost?.shared_post_id) data.shared_post_id = editPost.shared_post_id;
 
     if (taggedPets.length > 0) {
       data.pets = taggedPets.map((p) => ({
@@ -204,12 +250,23 @@ const PostScreen = () => {
 
     if (safeImages.length > 0) {
       const temp: string[] = [];
-      for (const img of safeImages) {
-        const img_url = await uploadImageUri(img.uri);
+      const vtemp: string[] = [];
+      for (const media of safeImages) {
+        if (!media.media) {
+          if (media.uri) {
+            if (media.is_video) vtemp.push(media.uri);
+            else temp.push(media.uri);
+          }
+          continue;
+        }
 
-        temp.push(img_url);
+        const { img_path, video_path } = await uploadAnyMedia(media.media);
+
+        if (img_path) temp.push(img_path);
+        if (video_path) vtemp.push(video_path);
       }
       data.img_paths = temp;
+      data.video_paths = vtemp;
     }
 
     if (editPost?.id) {
@@ -332,10 +389,14 @@ const PostScreen = () => {
                 style={{ position: "relative", marginRight: 10 }}
                 onPress={() => showImageViolations(image)}
               >
-                <Image
-                  source={{ uri: image.uri ?? "" }}
-                  style={styles.previewImage}
-                />
+                {image.is_video ? (
+                  <VideoPlayer url={image.uri} style={styles.previewImage} />
+                ) : (
+                  <Image
+                    source={{ uri: image.uri ?? "" }}
+                    style={styles.previewImage}
+                  />
+                )}
                 {image.scanning && (
                   <View
                     style={{

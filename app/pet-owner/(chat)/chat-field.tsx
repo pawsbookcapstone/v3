@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
-import { uploadImageUri } from "@/helpers/cloudinary";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { uploadAnyMedia } from "@/helpers/cloudinary";
 import {
   add,
   collectionName,
@@ -171,38 +172,63 @@ const ChatField = () => {
   };
 
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted)
-      throw "Permission to access camera is required!";
+      throw "Permission to access galery is required!";
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.7,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      // allowsEditing: true,
+      quality: 1,
     });
 
-    if (result.canceled) return;
+    if (result.canceled || result.assets.length == 0) return;
 
+    const asset = result.assets[0];
+    uploadAndSaveMedia(asset);
+  };
+
+  const uploadAndSaveMedia = async (file: any) => {
+    const { img_path, video_path }: any = await uploadAnyMedia(file);
     set("chats", chatId).value({
-      last_message: "Sent an image.",
+      last_message: `Sent an ${img_path ? "image" : "video"}.`,
       last_sent_at: serverTimestamp(),
     });
-    const img_path = await uploadImageUri(result.assets[0].uri);
-    add("chats", chatId, "messages").value({
-      img_path: img_path,
+    let data: any = {
       sender_id: userId,
       sent_at: serverTimestamp(),
-    });
+    };
+    if (img_path) data.img_path = img_path;
+    if (video_path) data.video_path = video_path;
+
+    add("chats", chatId, "messages").value(data);
     addNotif({
       receiver_id: otherUserId,
       href: "/pet-owner/chat-field",
-      type: "Sent a Image",
+      type: `Sent a ${img_path ? "Image" : "Video"}`,
       params: {
         otherUserId: userId,
         otherUserName: userName,
         otherUserImgPath: userImagePath ?? null,
       },
     });
+  };
+
+  const takeImage = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted)
+      throw "Permission to access camera is required!";
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+
+    if (result.canceled) return;
+
+    uploadAndSaveMedia(result.assets[0]);
   };
 
   const handleSeeProfile = async () => {
@@ -246,6 +272,19 @@ const ChatField = () => {
           item.img_path ? (
             <Image source={{ uri: item.img_path }} style={styles.chatImage} />
           ) : null
+          // <Image
+          //   source={{
+          //     uri: "https://res.cloudinary.com/diwwrxy8b/image/upload/v1769641991/jzibxr8wuvqhfqwcnusm.jpg",
+          //   }}
+          //   style={styles.chatImage}
+          // />
+        }
+
+        {
+          item.video_path ? (
+            <VideoPlayer style={styles.chatImage} url={item.video_path} />
+          ) : // <Image source={{ uri: item.img_path }} style={styles.chatImage} />
+          null
           // <Image
           //   source={{
           //     uri: "https://res.cloudinary.com/diwwrxy8b/image/upload/v1769641991/jzibxr8wuvqhfqwcnusm.jpg",
@@ -321,6 +360,18 @@ const ChatField = () => {
           {/* Input Row */}
           <View style={styles.inputRow}>
             {renderLoadingButton({
+              key: "galery",
+              style: styles.iconButton,
+              children: (
+                <MaterialIcons name="photo" size={24} color={Colors.primary} />
+              ),
+              hideLoadingText: true,
+              spinnerColor: Colors.primary,
+              spinnerSize: 24,
+              onPress: pickImage,
+            })}
+            {renderLoadingButton({
+              key: "take-photo",
               style: styles.iconButton,
               children: (
                 <MaterialIcons
@@ -332,9 +383,9 @@ const ChatField = () => {
               hideLoadingText: true,
               spinnerColor: Colors.primary,
               spinnerSize: 24,
-              onPress: pickImage,
+              onPress: takeImage,
             })}
-            {/* <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
+            {/* <TouchableOpacity onPress={takeImage} style={styles.iconButton}>
               <MaterialIcons
                 name="photo-camera"
                 size={24}

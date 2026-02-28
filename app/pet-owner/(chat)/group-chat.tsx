@@ -1,8 +1,9 @@
 import { useAppContext } from "@/AppsProvider";
-import { uploadImageUri } from "@/helpers/cloudinary";
+import { VideoPlayer } from "@/components/VideoPlayer";
+import { uploadAnyMedia } from "@/helpers/cloudinary";
 import { add, collectionName, find, set, update } from "@/helpers/db";
 import { db } from "@/helpers/firebase";
-import { useNotifHook } from "@/helpers/notifHook";
+import { NotifType, useNotifHook } from "@/helpers/notifHook";
 import { useLoadingHook } from "@/hooks/loadingHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -44,7 +45,7 @@ const GroupChat = () => {
 
   const addNotif = useNotifHook();
 
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   useOnFocusHook(() => {
     if (!userId) return;
@@ -81,6 +82,7 @@ const GroupChat = () => {
                 id: f.id,
                 message: a.message,
                 img_path: a.img_path,
+                video_path: a.video_path,
                 sender_id: a.sender_id,
                 yourMessage: yourMessage,
                 ..._user,
@@ -90,15 +92,14 @@ const GroupChat = () => {
         });
       });
     return () => {
-      find("chats", chatDetails.id)
-        .then(d => {
-          const seen_by_ids = d.data()?.seen_by_ids ?? []
-          if (seen_by_ids.some((id:string) => id === userId)) return
+      find("chats", chatDetails.id).then((d) => {
+        const seen_by_ids = d.data()?.seen_by_ids ?? [];
+        if (seen_by_ids.some((id: string) => id === userId)) return;
 
-          update("chats", chatDetails.id).value({
-            seen_by_ids: [...seen_by_ids, userId]
-          })
-        })
+        update("chats", chatDetails.id).value({
+          seen_by_ids: [...seen_by_ids, userId],
+        });
+      });
       if (unsubscribe) unsubscribe();
     };
   }, []);
@@ -109,7 +110,7 @@ const GroupChat = () => {
     set("chats", chatDetails.id).value({
       last_message: input.trim(),
       last_sent_at: serverTimestamp(),
-      seen_by_ids: [userId]
+      seen_by_ids: [userId],
     });
     add("chats", chatDetails.id, "messages").value({
       message: input.trim(),
@@ -133,8 +134,75 @@ const GroupChat = () => {
   };
 
   const pickImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted)
+      throw "Permission to access galery is required!";
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      // allowsEditing: true,
+      quality: 1,
+    });
+
+    if (result.canceled || result.assets.length == 0) return;
+
+    const asset = result.assets[0];
+    uploadAndSaveMedia(asset);
+  };
+
+  const uploadAndSaveMedia = async (file: any) => {
+    const { img_path, video_path }: any = await uploadAnyMedia(file);
+    set("chats", chatDetails.id).value({
+      last_message: `Sent an ${img_path ? "image" : "video"}.`,
+      last_sent_at: serverTimestamp(),
+    });
+
+    let data: any = {
+      sender_id: userId,
+      sent_at: serverTimestamp(),
+    };
+    if (img_path) data.img_path = img_path;
+    if (video_path) data.video_path = video_path;
+
+    add("chats", chatDetails.id, "messages").value(data);
+
+    const mediaType: NotifType = `Sent a ${img_path ? "Image" : "Video"}`;
+
+    for (const id of chatDetails.users) {
+      if (id === userId) continue;
+
+      addNotif({
+        receiver_id: id,
+        href: "/pet-owner/group-chat",
+        type: mediaType,
+        params: {
+          groupChatId: chatDetails.id,
+          groupChatName: chatDetails.name,
+        },
+      });
+    }
+  };
+
+  const takeImage = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted)
+      throw "Permission to access camera is required!";
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+
+    if (result.canceled) return;
+
+    uploadAndSaveMedia(result.assets[0]);
+  };
+
+  const pickImage1 = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) throw "Permission to access camera is required!"
+    if (!permission.granted) throw "Permission to access camera is required!";
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -144,30 +212,30 @@ const GroupChat = () => {
 
     if (result.canceled) return;
 
-    set("chats", chatDetails.id).value({
-      last_message: "Sent an image.",
-      last_sent_at: serverTimestamp(),
-    });
-    const img_path = await uploadImageUri(result.assets[0].uri);
-    add("chats", chatDetails.id, "messages").value({
-      img_path: img_path,
-      sender_id: userId,
-      sent_at: serverTimestamp(),
-    });
+    // set("chats", chatDetails.id).value({
+    //   last_message: "Sent an image.",
+    //   last_sent_at: serverTimestamp(),
+    // });
+    // const img_path = await uploadImageUri(result.assets[0].uri);
+    // add("chats", chatDetails.id, "messages").value({
+    //   img_path: img_path,
+    //   sender_id: userId,
+    //   sent_at: serverTimestamp(),
+    // });
 
-    for (const id of chatDetails.users) {
-      if (id === userId) continue;
+    // for (const id of chatDetails.users) {
+    //   if (id === userId) continue;
 
-      addNotif({
-        receiver_id: id,
-        href: "/pet-owner/group-chat",
-        type: "Sent a Image",
-        params: {
-          groupChatId: chatDetails.id,
-          groupChatName: chatDetails.name,
-        },
-      });
-    }
+    //   addNotif({
+    //     receiver_id: id,
+    //     href: "/pet-owner/group-chat",
+    //     type: "Sent a Image",
+    //     params: {
+    //       groupChatId: chatDetails.id,
+    //       groupChatName: chatDetails.name,
+    //     },
+    //   });
+    // }
   };
 
   const renderMessage = ({ item }: { item: any }) => (
@@ -180,10 +248,14 @@ const GroupChat = () => {
       ]}
     >
       {!item.yourMessage && item.avatar && (
-        <TouchableOpacity onPress={() => router.push({
-          pathname: '/usable/user-profile',
-          params: {userToViewId: item.sender_id}
-        })}>
+        <TouchableOpacity
+          onPress={() =>
+            router.push({
+              pathname: "/usable/user-profile",
+              params: { userToViewId: item.sender_id },
+            })
+          }
+        >
           <Image source={{ uri: item.avatar }} style={styles.senderAvatar} />
         </TouchableOpacity>
       )}
@@ -212,6 +284,10 @@ const GroupChat = () => {
 
           {item.img_path && (
             <Image source={{ uri: item.img_path }} style={styles.chatImage} />
+          )}
+          {item.video_path && (
+            <VideoPlayer style={styles.chatImage} url={item.video_path} />
+            // <Image source={{ uri: item.video_path }} style={styles.chatImage} />
           )}
         </View>
       </View>
@@ -267,16 +343,30 @@ const GroupChat = () => {
           {/* Input */}
           <View style={styles.inputRow}>
             {renderLoadingButton({
+              key: "galery",
               style: styles.iconButton,
-              children: <MaterialIcons
-                name="photo-camera"
-                size={24}
-                color={Colors.primary}
-              />,
+              children: (
+                <MaterialIcons name="photo" size={24} color={Colors.primary} />
+              ),
               hideLoadingText: true,
               spinnerColor: Colors.primary,
               spinnerSize: 24,
-              onPress: pickImage
+              onPress: pickImage,
+            })}
+            {renderLoadingButton({
+              key: "camera",
+              style: styles.iconButton,
+              children: (
+                <MaterialIcons
+                  name="photo-camera"
+                  size={24}
+                  color={Colors.primary}
+                />
+              ),
+              hideLoadingText: true,
+              spinnerColor: Colors.primary,
+              spinnerSize: 24,
+              onPress: takeImage,
             })}
             {/* <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
               <MaterialIcons

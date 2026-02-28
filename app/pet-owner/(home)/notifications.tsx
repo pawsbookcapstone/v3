@@ -29,7 +29,7 @@ type NotificationItem = {
   profile: string;
   href: Href;
   sender_id: string;
-  accepted:boolean;
+  accepted: boolean;
   description: string;
   type: NotifType;
   time: string; // ISO string
@@ -44,7 +44,8 @@ const descriptions: any = {
   "Confirm Friend Request": "Accepted your friend request",
   "Sent a Message": "Sent you a message",
   "Sent a Image": "Sent you an image",
-  "Share": "Shared your post",
+  "Sent a Video": "Sent you an video",
+  Share: "Shared your post",
 };
 
 const Notifications = () => {
@@ -58,7 +59,7 @@ const Notifications = () => {
     y: number;
   } | null>(null);
 
-  const addNotif = useNotifHook()
+  const addNotif = useNotifHook();
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -78,12 +79,12 @@ const Notifications = () => {
       const notifications = snapshot.docs.map((doc) => {
         const data = doc.data();
 
-        let desc
-        if (data.friend_request_accepted != undefined){
-          desc = data.friend_request_accepted ? "You accepted the request"
-                : "You declined the request"
-        }
-        else desc = descriptions[data.type] ?? ''
+        let desc;
+        if (data.friend_request_accepted != undefined) {
+          desc = data.friend_request_accepted
+            ? "You accepted the request"
+            : "You declined the request";
+        } else desc = descriptions[data.type] ?? "";
 
         return {
           id: doc.id,
@@ -96,7 +97,7 @@ const Notifications = () => {
           accepted: data.friend_request_accepted,
           type: data.type || "info",
           time: data.sent_at.toDate(),
-          params: data.params
+          params: data.params,
         };
       });
 
@@ -132,41 +133,40 @@ const Notifications = () => {
     setDropdownPos(null);
   };
 
-  const handleFriendRequest = async (item:any, accepted: boolean) => {
-    const friendSnap = await find('friends', item.params?.id)
+  const handleFriendRequest = async (item: any, accepted: boolean) => {
+    const friendSnap = await find("friends", item.params?.id);
 
-    if (accepted && !friendSnap.exists())
-    {
-      Alert.alert("Error", "You already declined this request or this request was cancelled!!!")
-      setFriendReqData(item.id, false)
-      return
+    if (accepted && !friendSnap.exists()) {
+      Alert.alert(
+        "Error",
+        "You already declined this request or this request was cancelled!!!",
+      );
+      setFriendReqData(item.id, false);
+      return;
     }
-    if (!accepted && friendSnap.exists() && friendSnap.data().confirmed)
-    {
-      Alert.alert("Error", "You already confirmed this request!!!")
-      setFriendReqData(item.id, true)
-      return
+    if (!accepted && friendSnap.exists() && friendSnap.data().confirmed) {
+      Alert.alert("Error", "You already confirmed this request!!!");
+      setFriendReqData(item.id, true);
+      return;
     }
-    setFriendReqData(item.id, accepted)
-    
-    if (accepted){
-      set('friends', item.params?.id).value({confirmed: true})
+    setFriendReqData(item.id, accepted);
+
+    if (accepted) {
+      set("friends", item.params?.id).value({ confirmed: true });
       addNotif({
         receiver_id: item.sender_id,
         href: "/usable/user-profile",
         type: "Confirm Friend Request",
-        params: {userToViewId: userId},
+        params: { userToViewId: userId },
       });
-    }
-    else
-      remove("friends", item.params?.id);
+    } else remove("friends", item.params?.id);
   };
 
-  const setFriendReqData = (id:string, accepted:boolean) => {
-    set('notifications',id).value({
+  const setFriendReqData = (id: string, accepted: boolean) => {
+    set("notifications", id).value({
       friend_request_accepted: accepted,
-      seen: true
-    })
+      seen: true,
+    });
     setData((prev) =>
       prev.map((n) =>
         n.id === id
@@ -180,8 +180,8 @@ const Notifications = () => {
             }
           : n,
       ),
-    ); 
-  }
+    );
+  };
 
   const openDropdown = (event: any, id: string) => {
     const handle = findNodeHandle(event.target);
@@ -193,91 +193,117 @@ const Notifications = () => {
     }
   };
 
-  const navigate = (item:any) => {
-    update('notifications', item.id).value({
-      seen: true
-    })
+  const navigate = (item: any) => {
+    update("notifications", item.id).value({
+      seen: true,
+    });
 
-    if (item.type === 'Sent a Message' && item.params.groupChatId){
-      find('chats', item.params.groupChatId).then(g => {
+    if (item.params?.groupChatId) {
+      find("chats", item.params.groupChatId).then((g) => {
         router.push({
-          pathname: '/pet-owner/group-chat',
+          pathname: "/pet-owner/group-chat",
           params: {
             chatDetailsStr: JSON.stringify({
               id: g.id,
-              ...g.data()
-            })
-          }
-        })
-      })
-      return
+              ...g.data(),
+            }),
+          },
+        });
+      });
+      return;
     }
-    
+
     router.push({
       pathname: item.href,
-      params: item.params
-    })
-  }
+      params: item.params,
+    });
+  };
 
-  const seeProfile = (sender_id:string) => {
+  const seeProfile = (sender_id: string) => {
     if (sender_id === userId) {
-      router.push('/pet-owner/profile')
-      return
+      router.push("/pet-owner/profile");
+      return;
     }
     router.push({
-      pathname: '/usable/user-profile',
+      pathname: "/usable/user-profile",
       params: {
         userToViewId: sender_id,
-      }
-    })
-  }
+      },
+    });
+  };
 
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
-        <TouchableOpacity onPress={() => navigate(item)}>
-    <View style={[styles.notificationItem, (!item.seen && {backgroundColor: Colors.veryLightGray} )]}>
-      <TouchableOpacity onPress={() => seeProfile(item.sender_id)}>
-        <Image source={{ uri: item.profile }} style={styles.avatar} />
-      </TouchableOpacity>
+    <TouchableOpacity onPress={() => navigate(item)}>
+      <View
+        style={[
+          styles.notificationItem,
+          !item.seen && { backgroundColor: Colors.veryLightGray },
+        ]}
+      >
+        <TouchableOpacity onPress={() => seeProfile(item.sender_id)}>
+          <Image source={{ uri: item.profile }} style={styles.avatar} />
+        </TouchableOpacity>
 
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={[styles.description, (!item.seen && {fontWeight: "800"} )]}>{item.description}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text
+            style={[styles.description, !item.seen && { fontWeight: "800" }]}
+          >
+            {item.description}
+          </Text>
 
-        {/* Friend request buttons */}
-        {item.type === "Sent Friend Request" && item.accepted == undefined && (
-          <View style={styles.friendButtons}>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: Colors.primary }]}
-              onPress={() => handleFriendRequest(item, true)}
-            >
-              <Text style={{ color: "white", fontSize: 13 }}>Accept</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#ddd" }]}
-              onPress={() => handleFriendRequest(item, false)}
-            >
-              <Text style={{ color: "#333", fontSize: 13 }}>Decline</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Friend request buttons */}
+          {item.type === "Sent Friend Request" &&
+            item.accepted == undefined && (
+              <View style={styles.friendButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: Colors.primary },
+                  ]}
+                  onPress={() => handleFriendRequest(item, true)}
+                >
+                  <Text style={{ color: "white", fontSize: 13 }}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: "#ddd" }]}
+                  onPress={() => handleFriendRequest(item, false)}
+                >
+                  <Text style={{ color: "#333", fontSize: 13 }}>Decline</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+        </View>
+
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={styles.time}>
+            {new Date(item.time).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+          {!item.seen && (
+            <View
+              style={{
+                backgroundColor: Colors.red,
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                marginTop: 5,
+                marginRight: 8,
+              }}
+            />
+          )}
+        </View>
+
+        {item.type !== "Sent Friend Request" && (
+          <TouchableOpacity
+            onPress={(e) => openDropdown(e.nativeEvent, item.id)}
+          >
+            <Entypo name="dots-three-vertical" size={18} color="gray" />
+          </TouchableOpacity>
         )}
       </View>
-
-      <View style={{alignItems:'flex-end'}}>
-        <Text style={styles.time}>
-          {new Date(item.time).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </Text>
-        {!item.seen && <View style={{backgroundColor: Colors.red, width: 8, height: 8, borderRadius: "50%", marginTop: 5, marginRight: 8}}/>}
-      </View>
-
-      {item.type !== "Sent Friend Request" && (
-        <TouchableOpacity onPress={(e) => openDropdown(e.nativeEvent, item.id)}>
-          <Entypo name="dots-three-vertical" size={18} color="gray" />
-        </TouchableOpacity>
-      )}
-    </View>
     </TouchableOpacity>
   );
 

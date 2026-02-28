@@ -8,7 +8,9 @@ import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword
+} from "firebase/auth";
 import { useState } from "react";
 import {
   Image,
@@ -17,7 +19,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const Login = () => {
@@ -25,8 +27,10 @@ const Login = () => {
 
   // const [email, setemail] = useState(emailToSwitch ?? "");
   // const [password, setpassword] = useState("");
-  const [email, setemail] = useState(emailToSwitch ?? "jhondoe@gmail.com");
-  const [password, setpassword] = useState("Password");
+  const [email, setemail] = useState(
+    emailToSwitch ?? "pawsbookcapstone@gmail.com",
+  );
+  const [password, setpassword] = useState("password");
   //ad's account
   // const [email, setemail] = useState("adrianfegalan@gmail.com");
   // const [password, setpassword] = useState("PASSWORD");
@@ -62,6 +66,17 @@ const Login = () => {
         await auth.signOut();
         throw "Account not found!!!";
       }
+
+      // if (!userCredential.user.emailVerified) {
+      //   sendEmailVerification(userCredential.user)
+      //     .then(() => {
+      //       ToastAndroid.show("Email verification sent.", ToastAndroid.SHORT);
+      //     })
+      //     .catch((e) => {
+      //       console.log(e);
+      //     });
+      //   throw "Account email is not verified!!!";
+      // }
 
       let profiles = await AsyncStorage.getItem("profiles");
       let changed = true;

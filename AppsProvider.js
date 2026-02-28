@@ -27,6 +27,7 @@ const descriptions = {
   "Confirm Friend Request": "Accepted your friend request",
   "Sent a Message": "Sent you a message",
   "Sent a Image": "Sent you an image",
+  "Sent a Video": "Sent you an video",
   Share: "Shared your post",
 };
 
@@ -52,7 +53,7 @@ export const AppsProvider = ({ children }) => {
 
   const isPage = useMemo(() => {
     return pageCreator ? true : false;
-  }, [pageCreator]);
+  }, [pageCreator, userId]);
 
   useEffect(() => {
     async function requestPermissions() {

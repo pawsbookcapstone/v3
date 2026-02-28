@@ -23,7 +23,9 @@ const Register = () => {
   const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [cpassword, setCPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showCPassword, setShowCPassword] = useState(false);
 
   const renderLoadingButton = useLoadingHook(true);
 
@@ -53,6 +55,11 @@ const Register = () => {
 
     if (password.length < 6) {
       Alert.alert("Error", "Password must be at least 6 characters");
+      return false;
+    }
+
+    if (password !== cpassword) {
+      Alert.alert("Error", "Password confirmation doesnt match");
       return false;
     }
 
@@ -194,6 +201,42 @@ const Register = () => {
             {password.length > 0 ? (
               <FontAwesome5
                 name={showPassword ? "eye-slash" : "eye"}
+                size={15}
+                color="#ccc"
+                marginRight={10}
+              />
+            ) : (
+              <View style={{ width: 15 }} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: "column", gap: 5 }}>
+        <Text style={styles.label}>Password Confirmation</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome5
+            name="lock"
+            size={20}
+            color={Colors.primary}
+            marginLeft={25}
+          />
+          <TextInput
+            placeholder="Enter your password confirmation"
+            value={cpassword}
+            secureTextEntry={!showCPassword}
+            onChangeText={setCPassword}
+            style={[styles.input, { flex: 1 }]}
+          />
+
+          <TouchableOpacity
+            disabled={cpassword.length === 0}
+            onPress={() => setShowCPassword((prev) => !prev)}
+            style={{ padding: 5 }}
+          >
+            {cpassword.length > 0 ? (
+              <FontAwesome5
+                name={showCPassword ? "eye-slash" : "eye"}
                 size={15}
                 color="#ccc"
                 marginRight={10}

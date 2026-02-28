@@ -19,13 +19,14 @@ import {
 } from "react-native";
 
 import { useAppContext } from "@/AppsProvider";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
-import { Timestamp } from "firebase/firestore";
 
 type BaseSavedItem = {
   id: string;
   saveCategory: "posts" | "marketplace" | "adopt";
   images: string[];
+  videos?: string[];
 };
 
 type PostItem = BaseSavedItem & {
@@ -135,6 +136,7 @@ const Saved = () => {
                 id: doc.id,
                 saveCategory: "posts",
                 images,
+                videos: data.videos ?? [],
                 title: data.caption ?? "",
                 // description: data.description ?? "",
                 createdAt: data.postCreatedAt ?? "",
@@ -164,7 +166,7 @@ const Saved = () => {
               throw new Error(`Unknown saveCategory: ${data.saveCategory}`);
           }
         });
-        console.log(items);
+
         setSavedItems(items);
       } catch (error) {
         console.error("Error fetching saved items:", error);
@@ -198,6 +200,7 @@ const Saved = () => {
 
   const renderItem = ({ item }: { item: SavedItem }) => {
     let images: string[] = [];
+    let videos: string[] = [];
     let title = "";
     let description = "";
     let extraInfo: React.ReactNode = null;
@@ -206,6 +209,8 @@ const Saved = () => {
       case "posts": {
         const post = item as PostItem;
         images = post.images;
+        videos = post.videos ?? [];
+
         title = post.title;
         // description = post.description;
         extraInfo = (
@@ -225,12 +230,12 @@ const Saved = () => {
               style={styles.ownerImage}
             />
             <Text style={styles.ownerName}>{post.ownerName}</Text>
-           {/* <Text>
+            {/* <Text>
   {((post.creat as Timestamp)?.toDate().toLocaleString()) || ""}
 </Text> */}
           </Pressable>
         );
-     
+
         break;
       }
 
@@ -295,78 +300,94 @@ const Saved = () => {
     }
 
     return (
-  <>
-    {activeTab === "Posts" ? (
-      <View style={styles.card}>
-          <View style={styles.content}>
-          {extraInfo}
-             {/* <Text style={styles.title}>{time}</Text> */}
-               <Text style={styles.title}>{title}</Text>
-        </View>
-        {images.length > 0 && (
-     <View style={{ ...styles.imageGrid, marginBottom: 5 }}>
-            {images.slice(0, 3).map((img, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.imageWrapper}
-                onPress={() => openImageModal(images, idx)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: img }}
-                  style={styles.gridImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
+      <>
+        {activeTab === "Posts" ? (
+          <View style={styles.card}>
+            <View style={styles.content}>
+              {extraInfo}
+              {/* <Text style={styles.title}>{time}</Text> */}
+              <Text style={styles.title}>{title}</Text>
+            </View>
+            <View style={{ ...styles.imageGrid, marginBottom: 5 }}>
+              {images.length > 0 && (
+                <>
+                  {images.slice(0, 3).map((img, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.imageWrapper}
+                      onPress={() => openImageModal(images, idx)}
+                      activeOpacity={0.8}
+                    >
+                      <Image
+                        source={{ uri: img }}
+                        style={styles.gridImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+              {videos.length > 0 && 3 - images.length > 0 && (
+                <>
+                  {videos.slice(0, 3 - images.length).map((img, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.imageWrapper}
+                      // onPress={() => openImageModal(videos, idx)}
+                      activeOpacity={0.8}
+                    >
+                      <VideoPlayer url={img} style={styles.gridImage} />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.trashButton}
+              onPress={() => removeItem(item.id)}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            {images.length > 0 && (
+              <View style={styles.imageGrid}>
+                {images.slice(0, 3).map((img, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.imageWrapper}
+                    onPress={() => openImageModal(images, idx)}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: img }}
+                      style={styles.gridImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.content}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.description}>{description}</Text>
+              {extraInfo}
+            </View>
+
+            <TouchableOpacity
+              style={styles.trashButton}
+              onPress={() => removeItem(item.id)}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.white} />
+            </TouchableOpacity>
           </View>
         )}
-
-      
-
-        <TouchableOpacity
-          style={styles.trashButton}
-          onPress={() => removeItem(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={Colors.white} />
-        </TouchableOpacity>
-      </View>
-    ) :   <View style={styles.card}>
-        {images.length > 0 && (
-          <View style={styles.imageGrid}>
-            {images.slice(0, 3).map((img, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.imageWrapper}
-                onPress={() => openImageModal(images, idx)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: img }}
-                  style={styles.gridImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-          {extraInfo}
-        </View>
-
-        <TouchableOpacity
-          style={styles.trashButton}
-          onPress={() => removeItem(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={Colors.white} />
-        </TouchableOpacity>
-      </View>}
-  </>
-);
-  }
+      </>
+    );
+  };
 
   return (
     <View style={screens.screen}>

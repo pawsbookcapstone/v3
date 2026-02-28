@@ -76,19 +76,18 @@ export const saveAdoptPet = async (
   }
 };
 
-
-
 export const savePost = async (
   userId: string,
   item: {
     id: string;
     caption: string;
     images: string[];
+    videos: string[];
     ownerId?: string;
     ownerName: string;
     ownerImage: string;
     saveCategory: string;
-    postCreatedAt:string;
+    postCreatedAt: string;
   },
 ) => {
   try {
@@ -100,6 +99,7 @@ export const savePost = async (
     await setDoc(savedRef, {
       caption: item.caption || "",
       images: item.images || "",
+      videos: item.videos || [],
       ownerId: item.ownerId || null,
       ownerName: item.ownerName || "",
       ownerImage: item.ownerImage || "",

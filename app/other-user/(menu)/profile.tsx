@@ -1,3 +1,4 @@
+import RenderPost from "@/app/usable/render-posts";
 import { useAppContext } from "@/AppsProvider";
 import {
   add,
@@ -16,7 +17,7 @@ import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import ProfileSkeleton from "@/shared/components/ProfileSkeleton";
 import { screens } from "@/shared/styles/styles";
-import { Entypo, Ionicons, MaterialIcons, Octicons } from "@expo/vector-icons";
+import { Entypo, MaterialIcons, Octicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -28,9 +29,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const maxImagesToShow = 3;
@@ -654,138 +654,7 @@ const PageProfile = () => {
                 </Pressable>
               </View>
 
-              {posts.map((post: any) => {
-                const maxImagesToShow = 3;
-                const extraImages =
-                  post.img_paths && post.img_paths.length > maxImagesToShow
-                    ? post.img_paths.length - maxImagesToShow
-                    : 0;
-                return (
-                  <View key={post.id} style={styles.postCard}>
-                    {/* Header */}
-                    <View style={styles.postHeader}>
-                      <Image
-                        source={{ uri: post.creator_img_path }}
-                        style={styles.postProfile}
-                      />
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.userName}>{post.creator_name}</Text>
-                        <Text style={styles.postTime}>{post.time}</Text>
-                      </View>
-                      {/* <Entypo
-                        name="dots-three-horizontal"
-                        size={18}
-                        color={Colors.gray}
-                      /> */}
-                    </View>
-
-                    {/* Content */}
-                    <Text style={styles.postContent}>{post.body}</Text>
-
-                    {post.img_paths && post.img_paths.length > 0 && (
-                      <View style={styles.imageGrid}>
-                        {post.img_paths
-                          .slice(0, maxImagesToShow)
-                          .map((img: any, idx: any) => (
-                            <TouchableOpacity
-                              key={idx}
-                              style={styles.imageWrapper}
-                              onPress={() =>
-                                openImageModal(post.img_paths, idx)
-                              }
-                              activeOpacity={0.8}
-                            >
-                              <Image
-                                source={{ uri: img }}
-                                style={styles.gridImage}
-                                resizeMode="cover"
-                              />
-                              {idx === maxImagesToShow - 1 &&
-                                extraImages > 0 && (
-                                  <View style={styles.overlay}>
-                                    <Text style={styles.overlayText}>
-                                      +{extraImages}
-                                    </Text>
-                                  </View>
-                                )}
-                            </TouchableOpacity>
-                          ))}
-                      </View>
-                    )}
-
-                    {post.shared && renderShared(post.shared)}
-
-                    {/* Footer */}
-                    <View style={styles.postFooter}>
-                      <Pressable
-                        style={styles.actionBtn}
-                        onPress={() => toggleLike(post.id)}
-                      >
-                        <Ionicons
-                          name={post.liked ? "heart-sharp" : "heart-outline"}
-                          size={23}
-                          color={post.liked ? "red" : "black"}
-                        />
-                        <Text style={styles.countText}>
-                          {(post.liked_by_ids ?? []).length}
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        style={styles.actionBtn}
-                        onPress={() => toggleComments(post.id)}
-                      >
-                        <Ionicons
-                          name="chatbubble-outline"
-                          size={20}
-                          color="black"
-                        />
-                        <Text style={styles.countText}>
-                          {post.comments.length}
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    {/* Comments */}
-                    {post.showComments && (
-                      <View style={styles.commentSection}>
-                        {post.comments.map((c: any, idx: number) => (
-                          <View key={idx} style={styles.commentRow}>
-                            <Image
-                              source={{ uri: c.profileImage }}
-                              style={styles.commentProfile}
-                            />
-                            <View style={styles.commentBubble}>
-                              <Text style={styles.commentUser}>
-                                {c.commented_by_name}
-                              </Text>
-                              <Text style={styles.commentText}>
-                                {c.message}
-                              </Text>
-                            </View>
-                          </View>
-                        ))}
-
-                        <View style={styles.addCommentRow}>
-                          <Image
-                            source={{ uri: profile.img_path }}
-                            style={styles.commentProfile}
-                          />
-                          <TextInput
-                            placeholder="Write a comment..."
-                            style={styles.commentInput}
-                            value={comment}
-                            onChangeText={setComment}
-                          />
-                          <Pressable onPress={() => handleAddComment(post.id)}>
-                            <Text style={styles.postCommentBtn}>Post</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
+              <RenderPost userToViewProfileId={pageId} useMap={true} />
             </View>
           )}
 

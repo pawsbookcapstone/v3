@@ -1,4 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { add, find, set } from "@/helpers/db";
 import { useNotifHook } from "@/helpers/notifHook";
 import { useLoadingHook } from "@/hooks/loadingHook";
@@ -21,15 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-const myProfileImage = "https://randomuser.me/api/portraits/men/32.jpg";
-const myProfileName = "John Doe";
-
-const dummyPets = [
-  { id: "1", name: "Buddy", image: "https://place-puppy.com/60x60" },
-  { id: "2", name: "Mochi", image: "https://placekitten.com/60/60" },
-  { id: "3", name: "Charlie", image: "https://placebear.com/60/60" },
-];
 
 const SharePost = () => {
   const { setFunc, userId, userName, userImagePath } = useAppContext();
@@ -200,6 +192,13 @@ const SharePost = () => {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {parsedPost.img_paths.map((img: string, idx: number) => (
                 <Image key={idx} source={{ uri: img }} style={styles.image} />
+              ))}
+            </ScrollView>
+          )}
+          {parsedPost.video_paths && parsedPost.video_paths?.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {parsedPost.video_paths.map((img: string, idx: number) => (
+                <VideoPlayer key={idx} url={img} style={styles.image} />
               ))}
             </ScrollView>
           )}
