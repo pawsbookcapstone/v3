@@ -4,7 +4,7 @@ import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens, ShadowStyle } from "@/shared/styles/styles";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -64,9 +64,14 @@ const Saved = () => {
   const router = useRouter();
   const { userId } = useAppContext();
 
-  const [activeTab, setActiveTab] = useState<
-    "Posts" | "Marketplace" | "Adoption"
-  >("Posts");
+  // const [activeTab, setActiveTab] = useState<
+  //   "Posts" | "Marketplace" | "Adoption"
+  // >("Posts");
+  const params = useLocalSearchParams<{
+    activeTab?: "Posts" | "Marketplace" | "Adoption";
+  }>();
+  console.log(params.activeTab);
+  const [activeTab, setActiveTab] = useState(params.activeTab ?? "Posts");
 
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [marketplace, setMarketplace] = useState<MarketplaceItem[]>([]);

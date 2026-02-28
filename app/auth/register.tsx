@@ -5,7 +5,10 @@ import { Colors } from "@/shared/colors/Colors";
 import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
 import { useState } from "react";
 import {
   Alert,
@@ -73,6 +76,11 @@ const Register = () => {
       return false;
     }
 
+    if (password !== cpassword) {
+      Alert.alert("Error", "Password confirmation doesnt match");
+      return false;
+    }
+
     return true;
   };
 
@@ -86,6 +94,9 @@ const Register = () => {
         email,
         password,
       );
+      const user = userCredential.user;
+
+      await sendEmailVerification(user);
 
       await set("users", userCredential.user.uid).value({
         id: userCredential.user.uid,
@@ -98,7 +109,10 @@ const Register = () => {
         img_path:
           "https://res.cloudinary.com/diwwrxy8b/image/upload/v1769641991/jzibxr8wuvqhfqwcnusm.jpg",
       });
-
+      Alert.alert(
+        "Success",
+        "Account created! Please check your email to verify your account.",
+      );
       router.replace("/auth/Login");
     } catch (e) {
       Alert.alert("Error", "Something went wrong");
@@ -340,7 +354,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
-    marginTop: 50,
+    marginTop: 20,
   },
   buttonText: {
     color: "white",

@@ -1,5 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
-import { get } from "@/helpers/db";
+import { get, getUserSavedItems } from "@/helpers/db";
 import { useNotificationHook } from "@/hooks/notificationHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -22,15 +22,15 @@ import {
 } from "react-native";
 
 const marketPlace = () => {
-  const {userId} = useAppContext()
-  
+  const { userId } = useAppContext();
+
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [filterVisible, setFilterVisible] = useState(false);
 
-  const hasNotif = useNotificationHook()
+  const hasNotif = useNotificationHook();
   // const onRefresh = () => {
   //   setLoading(true);
   //   setTimeout(() => {
@@ -45,7 +45,7 @@ const marketPlace = () => {
   };
 
   useOnFocusHook(() => {
-    onRefresh()
+    onRefresh();
   }, [userId]);
 
   // Categories
@@ -56,49 +56,51 @@ const marketPlace = () => {
     try {
       setLoading(true);
 
-      const query = await get("marketPlace").where(
+      const savedSnapshot = await getUserSavedItems(userId).where();
+      const savedIds = savedSnapshot.docs.map((doc) => doc.id);
+
+      const querySnapshot = await get("marketPlace").where(
         where("status", "==", "available"),
       );
 
-      const items = query.docs.map((doc) => {
-        const data = doc.data();
+      const items = querySnapshot.docs
+        .filter((doc) => !savedIds.includes(doc.id))
+        .map((doc) => {
+          const data = doc.data();
 
-        let images: string[] = [];
-        if (Array.isArray(data.images) && data.images.length > 0) {
-          images = data.images;
-        } else if (
-          typeof data.images === "string" &&
-          data.images.trim() !== ""
-        ) {
-          images = [data.images];
-        } else if (data.images && typeof data.images === "object") {
-          images = Object.values(data.images).filter(
-            (url) => typeof url === "string",
-          );
-        }
-        if (images.length === 0 && data.ownerImg) {
-          images = [data.ownerImg];
-        }
+          let images: string[] = [];
+          if (Array.isArray(data.images) && data.images.length > 0) {
+            images = data.images;
+          } else if (
+            typeof data.images === "string" &&
+            data.images.trim() !== ""
+          ) {
+            images = [data.images];
+          } else if (data.images && typeof data.images === "object") {
+            images = Object.values(data.images).filter(
+              (url) => typeof url === "string",
+            );
+          }
+          if (images.length === 0 && data.ownerImg) {
+            images = [data.ownerImg];
+          }
 
-        return {
-          id: doc.id,
-          name: data.title || "No title",
-          description: data.description || "",
-          title: data.title || "",
-          category: data.category || "Uncategorized",
-          price: data.price || 0,
-          image: images,
-          ownerName: data.ownerName || "Unknown",
-          ownerImg: data.ownerImg || null,
-          ownerId: data.ownerId,
-        };
-      });
+          return {
+            id: doc.id,
+            name: data.title || "No title",
+            description: data.description || "",
+            title: data.title || "",
+            category: data.category || "Uncategorized",
+            price: data.price || 0,
+            image: images,
+            ownerName: data.ownerName || "Unknown",
+            ownerImg: data.ownerImg || null,
+            ownerId: data.ownerId,
+          };
+        });
 
+      // 4️⃣ Update state
       setMarketItems(items);
-      // console.log(
-      //   "Fetched marketplace item ownerIds:",
-      //   items.map((item) => item.ownerId),
-      // );
     } catch (error) {
       console.log("Error fetching marketplace items:", error);
     } finally {
@@ -194,19 +196,19 @@ const marketPlace = () => {
           <Pressable onPress={() => router.push("/pet-owner/notifications")}>
             <Feather name="bell" size={24} color="black" />
 
-                        {
-                          hasNotif && 
-                                <View
-                                  style={{
-                                    position: "absolute",
-                                    top: -1,
-                                    right: 1,
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: 5,
-                                    backgroundColor: "red",
-                                  }}
-                                />}
+            {hasNotif && (
+              <View
+                style={{
+                  position: "absolute",
+                  top: -1,
+                  right: 1,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 5,
+                  backgroundColor: "red",
+                }}
+              />
+            )}
           </Pressable>
         </View>
       </HeaderLayout>

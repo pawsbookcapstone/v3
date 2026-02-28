@@ -615,14 +615,18 @@ export default function GroupProfile() {
                         alignItems: "center",
                         flex: 1,
                       }}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/usable/user-profile",
-                          params: {
-                            userToViewId: post.userId,
-                          },
-                        })
-                      }
+                      onPress={() => {
+                        if (userId !== post.userId) {
+                          router.push({
+                            pathname: "/usable/user-profile",
+                            params: {
+                              userToViewId: post.userId,
+                            },
+                          });
+                        } else {
+                          router.push("/pet-owner/profile");
+                        }
+                      }}
                     >
                       <Image
                         source={{ uri: post.profileImage }}

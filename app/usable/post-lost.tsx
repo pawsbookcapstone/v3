@@ -8,7 +8,7 @@ import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   Image,
@@ -25,33 +25,35 @@ const CreateLostFoundPost = () => {
   const [caption, setCaption] = useState("");
   const [type, setType] = useState<"Lost" | "Found">("Lost");
 
+  const { editPOst } = useLocalSearchParams();
+
   //bagong code
   //bagong code
   const { userId, userName, userImagePath } = useAppContext();
-  const renderLoadingButton = useLoadingHook(true)
+  const renderLoadingButton = useLoadingHook(true);
 
   const createLostFound = async () => {
-      const uploadedImages: string[] = await Promise.all(
-        images.map(async (uri) => {
-          if (!uri) return "";
-          const url = await uploadImageUri(uri);
-          return url;
-        }),
-      );
+    const uploadedImages: string[] = await Promise.all(
+      images.map(async (uri) => {
+        if (!uri) return "";
+        const url = await uploadImageUri(uri);
+        return url;
+      }),
+    );
 
-      const finalImages = uploadedImages.filter((url) => url);
+    const finalImages = uploadedImages.filter((url) => url);
 
-      await add("lost-and-found").value({
-        type: type,
-        caption: caption,
-        userId: userId,
-        userName: userName,
-        userImage: userImagePath,
-        createdAt: serverTimestamp(),
-        petImages: finalImages,
-        // ownerId:fin user.uid   // add later if needed
-      });
-      router.replace("/pet-owner/(menu)/lost-found");
+    await add("lost-and-found").value({
+      type: type,
+      caption: caption,
+      userId: userId,
+      userName: userName,
+      userImage: userImagePath,
+      createdAt: serverTimestamp(),
+      petImages: finalImages,
+      // ownerId:fin user.uid   // add later if needed
+    });
+    router.replace("/pet-owner/(menu)/lost-found");
   };
 
   const pickImages = async () => {
@@ -80,7 +82,7 @@ const CreateLostFoundPost = () => {
     <View style={[screens.screen, { backgroundColor: "#fff", flex: 1 }]}>
       <HeaderLayout noBorderRadius bottomBorder>
         <HeaderWithActions
-          title="Create Post"
+          title={editPOst === "true" ? "Edit Post" : "Create Post"}
           onBack={() => router.back()}
           centerTitle
         />
@@ -147,7 +149,7 @@ const CreateLostFoundPost = () => {
           style: [styles.postBtn, { opacity: caption ? 1 : 0.7 }],
           children: <Text style={styles.postBtnText}>Post</Text>,
           disabled: !caption,
-          onPress: createLostFound
+          onPress: createLostFound,
         })}
         {/* <Pressable
           style={[styles.postBtn, { opacity: caption ? 1 : 0.7 }]}

@@ -8,9 +8,7 @@ import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
-import {
-  signInWithEmailAndPassword
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import {
   Image,
@@ -19,7 +17,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const Login = () => {
@@ -74,6 +72,9 @@ const Login = () => {
       //     })
       //     .catch((e) => {
       //       console.log(e);
+      //     })
+      //     .finally(() => {
+      //       auth.signOut();
       //     });
       //   throw "Account email is not verified!!!";
       // }

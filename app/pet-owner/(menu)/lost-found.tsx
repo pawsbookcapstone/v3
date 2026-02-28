@@ -1,5 +1,6 @@
 import { useAppContext } from "@/AppsProvider";
-import { all } from "@/helpers/db";
+import ActionMenuModal from "@/components/modals/ActionModal";
+import { all, remove } from "@/helpers/db";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
 import HeaderWithActions from "@/shared/components/HeaderSet";
@@ -7,9 +8,11 @@ import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
+  Alert,
   Dimensions,
+  findNodeHandle,
   FlatList,
   Image,
   Modal,
@@ -18,6 +21,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from "react-native";
 
@@ -67,54 +71,89 @@ const LostFound = () => {
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedPostImages, setSelectedPostImages] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedPost, setSelectedPost] = useState("");
+
+  //for action modal
+  const [visible, setVisible] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const buttonRef = useRef(null);
+
+  const openMenu = (id: any) => {
+    setSelectedPost(id);
+    console.log(selectedPost);
+    if (buttonRef.current) {
+      const handle = findNodeHandle(buttonRef.current);
+      if (handle) {
+        UIManager.measure(handle, (x, y, width, height, pageX, pageY) => {
+          setPosition({
+            x: pageX - 110, // adjust left/right
+            y: pageY + height, // show below button
+          });
+
+          setVisible(true);
+          // setSelectedPost(id);
+          // console.log(selectedPost);
+          // deleteMypost(id)
+        });
+      }
+    }
+  };
+  const deleteMypost = async () => {
+    // if (!selectedPost) {
+    //   return;
+    // }
+    await remove("lost-and-found", selectedPost);
+    Alert.alert("Item Deleted!");
+    fetchLostAndFound();
+  };
 
   //bagong code
   const [lostAndFoundItems, setLostAndFoundItems] = useState<any[]>([]);
   const { userId, userName, userImagePath } = useAppContext();
+  const fetchLostAndFound = async () => {
+    try {
+      // setIsLoading(true);
+      const snapshot = await all("lost-and-found");
+      const data = snapshot.docs.map((doc) => {
+        const d = doc.data() as any;
+
+        let images: string[] = [];
+        if (Array.isArray(d.petImages) && d.petImages.length > 0) {
+          images = d.petImages;
+        } else if (
+          typeof d.petImages === "string" &&
+          d.petImages.trim() !== ""
+        ) {
+          images = [d.petImages];
+        } else if (d.petImages && typeof d.petImages === "object") {
+          images = Object.values(d.petImages).filter(
+            (url) => typeof url === "string",
+          );
+        }
+        if (images.length === 0 && d.userImage) {
+          images = [d.ownerImg];
+        }
+
+        return {
+          id: doc.id,
+          type: d.type,
+          caption: d.caption,
+          petImages: images,
+          userId: d.userId,
+          ownerName: d.userName,
+          ownerAvatar: d.userImage,
+          species: "undefined",
+        };
+      });
+      setLostAndFoundItems(data);
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
+    } finally {
+      // setIsLoading(false);
+    }
+  };
   useOnFocusHook(() => {
-    const fetchLostAndFound = async () => {
-      try {
-        // setIsLoading(true);
-        const snapshot = await all("lost-and-found");
-        const data = snapshot.docs.map((doc) => {
-          const d = doc.data() as any;
-
-          let images: string[] = [];
-          if (Array.isArray(d.petImages) && d.petImages.length > 0) {
-            images = d.petImages;
-          } else if (
-            typeof d.petImages === "string" &&
-            d.petImages.trim() !== ""
-          ) {
-            images = [d.petImages];
-          } else if (d.petImages && typeof d.petImages === "object") {
-            images = Object.values(d.petImages).filter(
-              (url) => typeof url === "string",
-            );
-          }
-          if (images.length === 0 && d.userImage) {
-            images = [d.ownerImg];
-          }
-
-          return {
-            id: doc.id,
-            type: d.type,
-            caption: d.caption,
-            petImages: images,
-            userId: d.userId,
-            ownerName: d.userName,
-            ownerAvatar: d.userImage,
-            species: "undefined",
-          };
-        });
-        setLostAndFoundItems(data);
-      } catch (error) {
-        console.error("Failed to fetch appointments:", error);
-      } finally {
-        // setIsLoading(false);
-      }
-    };
-
     fetchLostAndFound();
   }, []);
 
@@ -135,8 +174,8 @@ const LostFound = () => {
   });
 
   const renderPost = ({ item }: { item: (typeof lostAndFoundItems)[0] }) => {
-    const postImages = (item.petImages ?? []).filter((d:any) => d);
-    
+    const postImages = (item.petImages ?? []).filter((d: any) => d);
+
     const maxImagesToShow = 3;
     const extraImages = postImages.length - maxImagesToShow;
 
@@ -144,12 +183,37 @@ const LostFound = () => {
       <View style={styles.card}>
         <View style={styles.header}>
           <Image source={{ uri: item.ownerAvatar }} style={styles.avatar} />
-          <View style={{ flex: 1 }}>
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => {
+              if (userId !== item.userId) {
+                router.push({
+                  pathname: "/usable/user-profile",
+                  params: {
+                    userToViewId: item.userId,
+                  },
+                });
+              } else {
+                router.push("/pet-owner/profile");
+              }
+            }}
+          >
             <Text style={styles.ownerName}>{item.ownerName}</Text>
             <Text style={styles.subtext}>Posted • {item.species}</Text>
             <Text style={styles.subtext}>Status: {item.type}</Text>
-          </View>
-          <Feather name="more-horizontal" size={20} color="#6B7280" />
+          </Pressable>
+          {userId === item.userId ? (
+            <Pressable
+              ref={buttonRef}
+              onPress={() => {
+                // setSelectedPost(item.id);
+                // console.log(selectedPost);
+                openMenu(item.id);
+              }}
+            >
+              <Feather name="more-horizontal" size={22} color="#6B7280" />
+            </Pressable>
+          ) : null}
         </View>
 
         <Text style={styles.caption}>{item.caption}</Text>
@@ -185,22 +249,21 @@ const LostFound = () => {
           </View>
         )}
 
-        {
-          item.userId !== userId && 
-            <View style={styles.actionBar}>
-              <Pressable
-                style={styles.actionButton}
-                onPress={() =>
-                  handleChat(item.ownerName, item.userId, item.ownerAvatar)
-                }
-              >
-                <Feather name="message-circle" size={20} color={Colors.primary} />
-                <Text style={[styles.actionLabel, { color: Colors.primary }]}>
-                  Chat
-                </Text>
-              </Pressable>
-            </View>
-        }
+        {item.userId !== userId && (
+          <View style={styles.actionBar}>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() =>
+                handleChat(item.ownerName, item.userId, item.ownerAvatar)
+              }
+            >
+              <Feather name="message-circle" size={20} color={Colors.primary} />
+              <Text style={[styles.actionLabel, { color: Colors.primary }]}>
+                Chat
+              </Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     );
   };
@@ -214,7 +277,6 @@ const LostFound = () => {
           centerTitle
         />
       </HeaderLayout>
-
       {/* 🔍 Search Bar */}
       <View style={styles.searchContainer}>
         <Feather name="search" size={16} color="#000" />
@@ -226,7 +288,6 @@ const LostFound = () => {
           onChangeText={setSearch}
         />
       </View>
-
       <FlatList
         data={filteredPosts}
         keyExtractor={(item) => item.id}
@@ -234,7 +295,6 @@ const LostFound = () => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       />
-
       {/* ➕ Floating Button */}
       <Pressable
         style={styles.createButton}
@@ -246,7 +306,19 @@ const LostFound = () => {
       >
         <Feather name="plus" size={24} color="#fff" />
       </Pressable>
-
+      {/* modal for delete or edit */}\{" "}
+      <ActionMenuModal
+        visible={visible}
+        position={position}
+        onClose={() => setVisible(false)}
+        // onEdit={() =>
+        //   router.push({
+        //     pathname: "/usable/post-lost",
+        //     params: { editPOst: "true" },
+        //   })
+        // }
+        onDelete={() => deleteMypost()}
+      />
       {/* 🖼️ Fullscreen Modal */}
       {imageModalVisible && (
         <Modal visible={imageModalVisible} transparent>
