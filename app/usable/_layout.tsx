@@ -9,6 +9,15 @@ export default function Layout() {
         <Stack.Screen name="pet-list" options={{ headerShown: false }} />
         <Stack.Screen name="about" options={{ headerShown: false }} />
         <Stack.Screen name="group-profile" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="create-group-event"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="group-invite-friends"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen name="group-events" options={{ headerShown: false }} />
         <Stack.Screen name="share-post" options={{ headerShown: false }} />
         <Stack.Screen name="post-lost" options={{ headerShown: false }} />
         <Stack.Screen name="post-adapt" options={{ headerShown: false }} />

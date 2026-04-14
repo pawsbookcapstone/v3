@@ -207,6 +207,7 @@ const Community = () => {
         profile: item.profile,
         privacy: item.privacy,
         questions: item.questions,
+        groupOwnerId: item.groupOwnerId,
         type:
           activeTab === "MyGroup"
             ? "MyGroup"

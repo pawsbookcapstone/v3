@@ -82,8 +82,16 @@ interface PostDropdownProps {
 
 export default function GroupProfile() {
   const { userId, userName, userImagePath } = useAppContext();
-  const { id, title, members, profile, type, privacy, questions } =
-    useLocalSearchParams();
+  const {
+    id,
+    title,
+    members,
+    profile,
+    type,
+    privacy,
+    questions,
+    groupOwnerId,
+  } = useLocalSearchParams();
   const imageUri = Array.isArray(profile) ? profile[0] : profile;
   const [joinRequestSent, setJoinRequestSent] = useState(false);
   const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -506,15 +514,60 @@ export default function GroupProfile() {
           <Text style={[styles.members, { fontWeight: "600", marginLeft: 15 }]}>
             {pageDetails?.description}
           </Text>
-          <View style={{ flexDirection: "row", marginLeft: 15 }}>
+          {/* <View style={{ flexDirection: "row", marginLeft: 15 }}>
             <Text style={[styles.members, { fontWeight: "600" }]}>
               {pageDetails?.members}
             </Text>
             <Text style={styles.members}> members</Text>
+          </View> */}
+          <View
+            style={{
+              flexDirection: "row",
+              marginLeft: 15,
+              alignItems: "center",
+            }}
+          >
+            {/* MEMBERS TEXT */}
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={[styles.members, { fontWeight: "600" }]}>
+                {pageDetails?.members}
+              </Text>
+              <Text style={styles.members}> members</Text>
+            </View>
+
+            {/* GAP */}
+            <View style={{ width: 15 }} />
+
+            {/* INVITE BUTTON (ONLY FOR OWNER) */}
+            {type === "MyGroup" && (
+              <Pressable
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#38BDF8",
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 20,
+                }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/usable/group-invite-friends" as any,
+                    params: {
+                      groupId: groupId,
+                    },
+                  })
+                }
+              >
+                <Ionicons name="person-add-outline" size={14} color="#fff" />
+                <Text style={{ color: "#fff", marginLeft: 5, fontSize: 12 }}>
+                  Invite
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {/*  Leave / Join button */}
-          <Pressable
+          {/* <Pressable
             style={[
               styles.leaveButton,
               {
@@ -569,7 +622,82 @@ export default function GroupProfile() {
                 <Text style={styles.btnText}>Manage Group</Text>
               </>
             )}
-          </Pressable>
+          </Pressable> */}
+
+          <View style={{ flexDirection: "row", gap: 5 }}>
+            {/* MAIN BUTTON */}
+            <Pressable
+              style={[
+                styles.leaveButton,
+                {
+                  backgroundColor:
+                    type === "JoinedGroup" ? "#FF3F33" : Colors.primary,
+                },
+              ]}
+              onPress={() => {
+                if (type === "Suggestion") {
+                  if (joinRequestSent) {
+                    handleCancelJoinRequest();
+                  } else {
+                    handleJoinGroup();
+                  }
+                } else if (type === "JoinedGroup") {
+                  setShowLeaveModal(true);
+                } else if (type === "MyGroup") {
+                  router.push({
+                    pathname: "/usable/manage-group",
+                    params: { groupId: groupId, membersNumber: members },
+                  });
+                }
+              }}
+            >
+              {type === "Suggestion" && (
+                <>
+                  <FontAwesome5
+                    name={joinRequestSent ? "user-times" : "users"}
+                    size={15}
+                    color="white"
+                  />
+                  <Text style={styles.btnText}>
+                    {joinRequestSent ? "Cancel Request" : "Join Group"}
+                  </Text>
+                </>
+              )}
+
+              {type === "JoinedGroup" && (
+                <>
+                  <Entypo name="log-out" size={15} color="white" />
+                  <Text style={styles.btnText}>Leave Group</Text>
+                </>
+              )}
+
+              {type === "MyGroup" && (
+                <>
+                  <Ionicons name="settings-outline" size={16} color="white" />
+                  <Text style={styles.btnText}>Manage Group</Text>
+                </>
+              )}
+            </Pressable>
+
+            {/* ✅ EVENTS BUTTON (OWNER + MEMBERS) */}
+            {(type === "MyGroup" || type === "JoinedGroup") && (
+              <Pressable
+                style={[styles.leaveButton, { backgroundColor: "#4CAF50" }]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/usable/group-events" as any,
+                    params: {
+                      groupId: groupId,
+                      groupOwnerId: groupOwnerId,
+                    },
+                  })
+                }
+              >
+                <Ionicons name="calendar-outline" size={16} color="white" />
+                <Text style={styles.btnText}>Events</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/*  Add Post (MyGroup only) */}
@@ -916,7 +1044,7 @@ const styles = StyleSheet.create({
   groupInfo: { backgroundColor: "#fff", paddingVertical: 15 },
   leaveButton: {
     borderRadius: 10,
-    width: "50%",
+    width: "35%",
     padding: 10,
     flexDirection: "row",
     justifyContent: "center",
