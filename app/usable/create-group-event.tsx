@@ -4,16 +4,17 @@ import { screens } from "@/shared/styles/styles";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 // ✅ HEADER
+import { add } from "@/helpers/db";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 
@@ -26,26 +27,27 @@ const CreateEvent = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title || !date || !location) {
       Alert.alert("Missing Fields", "Please fill in all required fields.");
       return;
     }
 
-    //STATIC CREATE
-    const newEvent = {
-      id: Date.now().toString(),
-      groupId,
+    const data = {
+      createdByGroupId: groupId,
+      createdById: userId,
       title,
-      date,
       location,
+      date,
       description,
-      createdBy: userId,
-      attendees: [],
-      savedBy: [],
     };
 
-    console.log("Created Event:", newEvent);
+    try {
+      await add("events").value(data);
+    } catch (e) {
+      Alert.alert("Error", "Event creation failed!!!");
+      return;
+    }
 
     Alert.alert("Success", "Event created successfully!");
 

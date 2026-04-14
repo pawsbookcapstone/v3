@@ -680,23 +680,23 @@ export default function GroupProfile() {
             </Pressable>
 
             {/* ✅ EVENTS BUTTON (OWNER + MEMBERS) */}
-            {(type === "MyGroup" || type === "JoinedGroup") && (
-              <Pressable
-                style={[styles.leaveButton, { backgroundColor: "#4CAF50" }]}
-                onPress={() =>
-                  router.push({
-                    pathname: "/usable/group-events" as any,
-                    params: {
-                      groupId: groupId,
-                      groupOwnerId: groupOwnerId,
-                    },
-                  })
-                }
-              >
-                <Ionicons name="calendar-outline" size={16} color="white" />
-                <Text style={styles.btnText}>Events</Text>
-              </Pressable>
-            )}
+            {/* {(type === "MyGroup" || type === "JoinedGroup") && ( */}
+            <Pressable
+              style={[styles.leaveButton, { backgroundColor: "#4CAF50" }]}
+              onPress={() =>
+                router.push({
+                  pathname: "/usable/group-events" as any,
+                  params: {
+                    groupId: groupId,
+                    groupOwnerId: groupOwnerId,
+                  },
+                })
+              }
+            >
+              <Ionicons name="calendar-outline" size={16} color="white" />
+              <Text style={styles.btnText}>Events</Text>
+            </Pressable>
+            {/* )} */}
           </View>
         </View>
 

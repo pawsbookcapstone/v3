@@ -57,7 +57,7 @@ const profile = () => {
   // ];
 
   useOnFocusHook(() => {
-    if (isPage || !userId)return 
+    if (isPage || !userId) return;
 
     const fetchPets = async () => {
       const snap = await all("users", userId, "pets");
@@ -68,7 +68,7 @@ const profile = () => {
 
   const handleLogout = () => {
     // set("users", userId).value({ last_online_at: serverTimestamp(), active_status: 'inactive' });
-    reset()
+    reset();
     auth.signOut();
     router.replace("/auth/Login");
     console.log("Logged out");
@@ -93,15 +93,14 @@ const profile = () => {
             <Pressable
               style={styles.row}
               onPress={() => {
-                if (!isPage)
-                  return router.push('/pet-owner/profile');
+                if (!isPage) return router.push("/pet-owner/profile");
 
                 router.push({
-                  pathname: '/other-user/profile',
+                  pathname: "/other-user/profile",
                   params: {
-                    pageId: userId
-                  }
-                })
+                    pageId: userId,
+                  },
+                });
               }}
             >
               <View style={styles.avatar}>
@@ -125,8 +124,8 @@ const profile = () => {
             </Pressable>
           </View>
 
-          {
-            !isPage && <>
+          {!isPage && (
+            <>
               <View style={styles.devider} />
 
               <Text style={styles.myPets}>My Pets</Text>
@@ -166,7 +165,11 @@ const profile = () => {
                       <Text
                         style={[
                           styles.addPet,
-                          { color: "#8B8B8B", fontSize: 12, fontFamily: "Roboto" },
+                          {
+                            color: "#8B8B8B",
+                            fontSize: 12,
+                            fontFamily: "Roboto",
+                          },
                         ]}
                       >
                         You can add only 3 pets
@@ -176,11 +179,16 @@ const profile = () => {
                 </Pressable>
               </Link>
             </>
-          }
+          )}
         </View>
 
         <View style={styles.actionButtonsWrapper}>
-          <Link href={isPage ? "/other-user/connections" : "/pet-owner/(menu)/community"} asChild>
+          <Link
+            href={
+              isPage ? "/other-user/connections" : "/pet-owner/(menu)/community"
+            }
+            asChild
+          >
             <Pressable style={styles.actionButton}>
               <View
                 style={[
@@ -193,11 +201,20 @@ const profile = () => {
                   style={{ opacity: 100 }}
                 />
               </View>
-              <Text style={styles.actionButtonText}>{isPage ? 'Connections' : 'Group'}</Text>
+              <Text style={styles.actionButtonText}>
+                {isPage ? "Connections" : "Group"}
+              </Text>
             </Pressable>
           </Link>
 
-          <Link href={isPage ? "/other-user/appointment" : "/pet-owner/(menu)/appointment"} asChild>
+          <Link
+            href={
+              isPage
+                ? "/other-user/appointment"
+                : "/pet-owner/(menu)/appointment"
+            }
+            asChild
+          >
             <Pressable style={styles.actionButton}>
               <View
                 style={[
@@ -212,69 +229,89 @@ const profile = () => {
           </Link>
         </View>
 
-        {
-          !isPage &&
-        <View style={styles.actionButtonsWrapper}>
-          <Link href="/pet-owner/(menu)/adapt" asChild>
-            <Pressable style={styles.actionButton}>
-              <View
-                style={[
-                  styles.actionButtonIcon,
-                  { backgroundColor: "rgba(0, 255, 200, 0.22)" },
-                ]}
-              >
-                <FontAwesome5 name="paw" size={22} color="#80CBC4" />
-              </View>
-              <Text style={styles.actionButtonText}>Adapt Pet</Text>
-            </Pressable>
-          </Link>
+        {!isPage && (
+          <View style={styles.actionButtonsWrapper}>
+            <Link href="/pet-owner/(menu)/adapt" asChild>
+              <Pressable style={styles.actionButton}>
+                <View
+                  style={[
+                    styles.actionButtonIcon,
+                    { backgroundColor: "rgba(0, 255, 200, 0.22)" },
+                  ]}
+                >
+                  <FontAwesome5 name="paw" size={22} color="#80CBC4" />
+                </View>
+                <Text style={styles.actionButtonText}>Adapt Pet</Text>
+              </Pressable>
+            </Link>
 
-          <Link href="/pet-owner/(menu)/lost-found" asChild>
-            <Pressable style={styles.actionButton}>
-              <View
-                style={[
-                  styles.actionButtonIcon,
-                  { backgroundColor: "rgba(11, 48, 43, 0.3)" },
-                ]}
-              >
-                <FontAwesome name="question-circle" size={25} color="#173B45" />
-              </View>
-              <Text style={styles.actionButtonText}>Lost and Found</Text>
-            </Pressable>
-          </Link>
-        </View>
-        }
+            <Link href="/pet-owner/(menu)/lost-found" asChild>
+              <Pressable style={styles.actionButton}>
+                <View
+                  style={[
+                    styles.actionButtonIcon,
+                    { backgroundColor: "rgba(11, 48, 43, 0.3)" },
+                  ]}
+                >
+                  <FontAwesome
+                    name="question-circle"
+                    size={25}
+                    color="#173B45"
+                  />
+                </View>
+                <Text style={styles.actionButtonText}>Lost and Found</Text>
+              </Pressable>
+            </Link>
+          </View>
+        )}
 
-        {
-          !isPage && 
-        <View style={styles.actionButtonsWrapper}>
-          <Link href="/pet-owner/(menu)/manage-pet" asChild>
-            <Pressable style={styles.actionButton}>
-              <View style={styles.actionButtonIcon}>
-                <Image
-                  source={require("../../../assets/images/vaccine.png")}
-                  style={{ opacity: 100 }}
-                />
-              </View>
-              <Text style={styles.actionButtonText}>Manage Pets</Text>
-            </Pressable>
-          </Link>
+        {!isPage && (
+          <View style={styles.actionButtonsWrapper}>
+            <Link href="/pet-owner/(menu)/manage-pet" asChild>
+              <Pressable style={styles.actionButton}>
+                <View style={styles.actionButtonIcon}>
+                  <Image
+                    source={require("../../../assets/images/vaccine.png")}
+                    style={{ opacity: 100 }}
+                  />
+                </View>
+                <Text style={styles.actionButtonText}>Manage Pets</Text>
+              </Pressable>
+            </Link>
 
-          <Link href="/pet-owner/(menu)/saved" asChild>
-            <Pressable style={styles.actionButton}>
-              <View
-                style={[
-                  styles.actionButtonIcon,
-                  { backgroundColor: "rgba(255, 0, 242, 0.3)" },
-                ]}
-              >
-                <FontAwesome name="bookmark" size={22} color="#9112BC" />
-              </View>
-              <Text style={styles.actionButtonText}>Saved</Text>
-            </Pressable>
-          </Link>
-        </View>
-        }
+            <Link href="/pet-owner/(menu)/saved" asChild>
+              <Pressable style={styles.actionButton}>
+                <View
+                  style={[
+                    styles.actionButtonIcon,
+                    { backgroundColor: "rgba(255, 0, 242, 0.3)" },
+                  ]}
+                >
+                  <FontAwesome name="bookmark" size={22} color="#9112BC" />
+                </View>
+                <Text style={styles.actionButtonText}>Saved</Text>
+              </Pressable>
+            </Link>
+          </View>
+        )}
+
+        {/* {!isPage && (
+          <View style={styles.actionButtonsWrapper}>
+            <Link href="/usable/about" asChild>
+              <Pressable style={styles.actionButton}>
+                <View
+                  style={[
+                    styles.actionButtonIcon,
+                    { backgroundColor: "rgba(255, 0, 0, 0.3)" },
+                  ]}
+                >
+                  <MaterialIcons name="event" size={22} color={"#FF0000"} />
+                </View>
+                <Text style={styles.actionButtonText}>Events</Text>
+              </Pressable>
+            </Link>
+          </View>
+        )} */}
 
         <View style={styles.actionButtonsWrapper}>
           <Link href="/usable/about" asChild>

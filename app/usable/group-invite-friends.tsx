@@ -3,63 +3,73 @@ import { screens } from "@/shared/styles/styles";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 // ✅ HEADER
+import { useAppContext } from "@/AppsProvider";
+import { all, collectionName, set } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 
 const InviteFriends = () => {
-  const { groupId } = useLocalSearchParams();
+  const { userId } = useAppContext();
+  const { groupId }: { groupId: string } = useLocalSearchParams();
 
   const [search, setSearch] = useState("");
 
   // ✅ STATIC FRIEND LIST
-  const [friends] = useState([
-    {
-      id: "1",
-      name: "Juan Dela Cruz",
-      image: "https://randomuser.me/api/portraits/men/1.jpg",
-      invited: false,
-    },
-    {
-      id: "2",
-      name: "Maria Santos",
-      image: "https://randomuser.me/api/portraits/women/2.jpg",
-      invited: false,
-    },
-    {
-      id: "3",
-      name: "John Smith",
-      image: "https://randomuser.me/api/portraits/men/3.jpg",
-      invited: false,
-    },
-    {
-      id: "4",
-      name: "Anna Reyes",
-      image: "https://randomuser.me/api/portraits/women/4.jpg",
-      invited: false,
-    },
-  ]);
+  const [friends] = useState<any>([]);
 
   const [friendList, setFriendList] = useState(friends);
 
+  useOnFocusHook(() => {
+    const fetch = async () => {
+      const members = await all("groups", groupId, "members");
+      const memberIds = members.docs.map((m) => {
+        return m.data().userId;
+      });
+      const invited = await collectionName(
+        "groups",
+        groupId,
+        "invites",
+      ).getMapped((id, data) => data.userId);
+
+      const snap = await collectionName("users")
+        .whereNotIn("id", [...memberIds, userId])
+        .get();
+      setFriendList(
+        snap.docs.map((user: any) => {
+          const d = user.data();
+          return {
+            id: user.id,
+            name: `${d.firstname} ${d.lastname}`,
+            image: d.img_path,
+            invited: invited.includes(user.id),
+          };
+        }),
+      );
+    };
+    fetch();
+  });
+
   // ✅ INVITE ACTION (STATIC)
   const handleInvite = (id: string) => {
-    setFriendList((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, invited: true } : f)),
+    set("groups", groupId, "invites", id).value({ userId: id });
+    setFriendList((prev: any) =>
+      prev.map((f: any) => (f.id === id ? { ...f, invited: true } : f)),
     );
   };
 
   // ✅ FILTER SEARCH
-  const filtered = friendList.filter((f) =>
+  const filtered = friendList.filter((f: any) =>
     f.name.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -80,9 +90,7 @@ const InviteFriends = () => {
         onPress={() => handleInvite(item.id)}
         disabled={item.invited}
       >
-        <Text style={styles.inviteText}>
-          {item.invited ? "Invited" : "Invite"}
-        </Text>
+        <Text style={styles.inviteText}>Invite</Text>
       </TouchableOpacity>
     </View>
   );

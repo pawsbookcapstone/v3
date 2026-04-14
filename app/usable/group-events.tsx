@@ -3,14 +3,16 @@ import { Colors } from "@/shared/colors/Colors";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 // ✅ HEADER
+import { collectionName, remove, set } from "@/helpers/db";
+import { useOnFocusHook } from "@/hooks/onFocusHook";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
@@ -20,64 +22,71 @@ const GroupEvents = () => {
   const { groupId, groupOwnerId, title } = useLocalSearchParams();
 
   // ✅ STATIC EVENTS
-  const [events, setEvents] = useState<any[]>([
-    {
-      id: "1",
-      groupId: groupId,
-      title: "Pet Vaccination Day",
-      date: "2026-05-10",
-      location: "Manila Vet Clinic",
-      attendees: [],
-      savedBy: [],
-    },
-    {
-      id: "2",
-      groupId: groupId,
-      title: "Dog Training Workshop",
-      date: "2026-05-15",
-      location: "Quezon City Park",
-      attendees: [],
-      savedBy: [],
-    },
-  ]);
+  const [events, setEvents] = useState<any[]>([]);
+
+  useOnFocusHook(() => {
+    const fetch = async () => {
+      const _events = await collectionName("events")
+        .whereEquals("createdByGroupId", groupId)
+        .getMapped();
+      const u = await Promise.all(
+        _events.map(async (ev) => {
+          const attendees = await collectionName(
+            "events",
+            ev.id,
+            "attendees",
+          ).getMapped((id, data) => data.userId);
+          return { ...ev, attendees };
+        }),
+      );
+      setEvents(u);
+    };
+    fetch();
+  });
 
   // ✅ JOIN EVENT (LOCAL ONLY)
-  const joinEvent = (eventId: string) => {
+  const joinEvent = (eventId: string, join: boolean) => {
     setEvents((prev) =>
       prev.map((event) => {
-        if (event.id === eventId) {
-          if (event.attendees.includes(userId)) return event;
+        if (event.id !== eventId) return event;
 
+        if (join) {
+          if (event.attendees.includes(userId)) return event;
+          set("events", eventId, "attendees", userId).value({ userId });
           return {
             ...event,
             attendees: [...event.attendees, userId],
           };
         }
-        return event;
+        if (!event.attendees.includes(userId)) return event;
+        remove("events", eventId, "attendees", userId);
+        return {
+          ...event,
+          attendees: event.attendees.filter((a: any) => a !== userId),
+        };
       }),
     );
   };
 
   // ✅ SAVE EVENT (LOCAL ONLY)
   const saveEvent = (eventId: string) => {
-    setEvents((prev) =>
-      prev.map((event) => {
-        if (event.id === eventId) {
-          if (event.savedBy.includes(userId)) return event;
-
-          return {
-            ...event,
-            savedBy: [...event.savedBy, userId],
-          };
-        }
-        return event;
-      }),
-    );
+    // setEvents((prev) =>
+    //   prev.map((event) => {
+    //     if (event.id === eventId) {
+    //       if (event.savedBy.includes(userId)) return event;
+    //       return {
+    //         ...event,
+    //         savedBy: [...event.savedBy, userId],
+    //       };
+    //     }
+    //     return event;
+    //   }),
+    // );
   };
 
   const renderItem = ({ item }: any) => {
     const isJoined = item.attendees.includes(userId);
-    const isSaved = item.savedBy.includes(userId);
+    const isSaved = false;
 
     return (
       <View style={styles.card}>
@@ -85,21 +94,23 @@ const GroupEvents = () => {
         <Text>{item.date}</Text>
         <Text>{item.location}</Text>
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => joinEvent(item.id)}
-          >
-            <Text>{isJoined ? "Joined" : "Join"}</Text>
-          </TouchableOpacity>
+        {!isOwner && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => joinEvent(item.id, !isJoined)}
+            >
+              <Text>{isJoined ? "Left" : "Join"}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.btn}
-            onPress={() => saveEvent(item.id)}
-          >
-            <Text>{isSaved ? "Saved" : "Save"}</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => saveEvent(item.id)}
+            >
+              <Text>{isSaved ? "Saved" : "Save"}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   };

@@ -10,9 +10,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.pawsbook.capstone",
       "supportsTablet": true,
       "config": {
         "googleMapsApiKey": "AIzaSyC8tPLuD2VN7-YfUm5ockJmDRt4aQ0J5rA"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "notification": {

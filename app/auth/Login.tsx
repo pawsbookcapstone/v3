@@ -8,7 +8,10 @@ import { screens } from "@/shared/styles/styles";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { useState } from "react";
 import {
   Image,
@@ -16,6 +19,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -65,19 +69,19 @@ const Login = () => {
         throw "Account not found!!!";
       }
 
-      // if (!userCredential.user.emailVerified) {
-      //   sendEmailVerification(userCredential.user)
-      //     .then(() => {
-      //       ToastAndroid.show("Email verification sent.", ToastAndroid.SHORT);
-      //     })
-      //     .catch((e) => {
-      //       console.log(e);
-      //     })
-      //     .finally(() => {
-      //       auth.signOut();
-      //     });
-      //   throw "Account email is not verified!!!";
-      // }
+      if (!userCredential.user.emailVerified) {
+        sendEmailVerification(userCredential.user)
+          .then(() => {
+            ToastAndroid.show("Email verification sent.", ToastAndroid.SHORT);
+          })
+          .catch((e) => {
+            console.log(e);
+          })
+          .finally(() => {
+            auth.signOut();
+          });
+        throw "Account email is not verified!!!";
+      }
 
       let profiles = await AsyncStorage.getItem("profiles");
       let changed = true;
