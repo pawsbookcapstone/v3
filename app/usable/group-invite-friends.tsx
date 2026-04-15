@@ -15,6 +15,7 @@ import {
 // ✅ HEADER
 import { useAppContext } from "@/AppsProvider";
 import { all, collectionName, set } from "@/helpers/db";
+import { useNotifHook } from "@/helpers/notifHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
@@ -29,6 +30,8 @@ const InviteFriends = () => {
   const [friends] = useState<any>([]);
 
   const [friendList, setFriendList] = useState(friends);
+
+  const addNotif = useNotifHook();
 
   useOnFocusHook(() => {
     const fetch = async () => {
@@ -62,6 +65,14 @@ const InviteFriends = () => {
 
   // ✅ INVITE ACTION (STATIC)
   const handleInvite = (id: string) => {
+    addNotif({
+      receiver_id: id,
+      type: "Group Invite",
+      href: "/usable/group-profile",
+      params: {
+        groupId,
+      },
+    });
     set("groups", groupId, "invites", id).value({ userId: id });
     setFriendList((prev: any) =>
       prev.map((f: any) => (f.id === id ? { ...f, invited: true } : f)),

@@ -11,6 +11,7 @@ export type NotifType =
   | "Sent a Message"
   | "Sent a Image"
   | "Sent a Video"
+  | "Group Invite"
   | "Share";
 
 type Notif = {

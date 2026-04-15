@@ -83,6 +83,10 @@ const GroupEvents = () => {
     //   }),
     // );
   };
+  const deleteEvent = (eventId: string) => {
+    remove("events", eventId);
+    setEvents((prev) => prev.filter((event) => event.id !== eventId));
+  };
 
   const renderItem = ({ item }: any) => {
     const isJoined = item.attendees.includes(userId);
@@ -94,7 +98,7 @@ const GroupEvents = () => {
         <Text>{item.date}</Text>
         <Text>{item.location}</Text>
 
-        {!isOwner && (
+        {!isOwner ? (
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.btn}
@@ -103,13 +107,20 @@ const GroupEvents = () => {
               <Text>{isJoined ? "Left" : "Join"}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.btn}
               onPress={() => saveEvent(item.id)}
             >
               <Text>{isSaved ? "Saved" : "Save"}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.btn, { width: 60 }]}
+            onPress={() => deleteEvent(item.id)}
+          >
+            <Text>Delete</Text>
+          </TouchableOpacity>
         )}
       </View>
     );

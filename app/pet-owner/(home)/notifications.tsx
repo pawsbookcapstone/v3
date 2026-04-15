@@ -1,5 +1,14 @@
 import { useAppContext } from "@/AppsProvider";
-import { find, get, remove, set, update, where } from "@/helpers/db";
+import {
+  collectionName,
+  find,
+  get,
+  remove,
+  serverTimestamp,
+  set,
+  update,
+  where,
+} from "@/helpers/db";
 import { NotifType, useNotifHook } from "@/helpers/notifHook";
 import { useOnFocusHook } from "@/hooks/onFocusHook";
 import { Colors } from "@/shared/colors/Colors";
@@ -46,6 +55,7 @@ const descriptions: any = {
   "Sent a Image": "Sent you an image",
   "Sent a Video": "Sent you an video",
   Share: "Shared your post",
+  "Group Invite": "Invites you to a group",
 };
 
 const Notifications = () => {
@@ -67,7 +77,7 @@ const Notifications = () => {
     setRefreshing(false);
   };
 
-  const { userId } = useAppContext();
+  const { userId, userName, userImagePath } = useAppContext();
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -84,6 +94,10 @@ const Notifications = () => {
           desc = data.friend_request_accepted
             ? "You accepted the request"
             : "You declined the request";
+        } else if (data.accepted != undefined) {
+          desc = data.accepted
+            ? "You accepted the group request"
+            : "You declined the group request";
         } else desc = descriptions[data.type] ?? "";
 
         return {
@@ -232,6 +246,41 @@ const Notifications = () => {
     });
   };
 
+  const joinGroup = async (id: string, groupId: string) => {
+    set("notifications", id).value({
+      accepted: true,
+      seen: true,
+    });
+
+    await set("groups", groupId, "members", userId).value({
+      userId,
+      joinedAt: serverTimestamp(),
+      userImagePath,
+      userName,
+      role: "member",
+    });
+
+    const group: any = await collectionName("groups", groupId).getMapped(
+      (id, data) => ({ members: data.members, title: data.title }),
+    );
+
+    await set("users", userId, "joined-groups", groupId).value({
+      groupId,
+      groupName: group.title,
+      joinedAt: serverTimestamp(),
+    });
+
+    await update("groups", groupId).value({
+      members: Number(group.members) + 1,
+    });
+  };
+  const declineJoinGroup = async (id: string) => {
+    set("notifications", id).value({
+      accepted: false,
+      seen: true,
+    });
+  };
+
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
     <TouchableOpacity onPress={() => navigate(item)}>
       <View
@@ -273,6 +322,22 @@ const Notifications = () => {
                 </TouchableOpacity>
               </View>
             )}
+          {item.type === "Group Invite" && !item.seen && (
+            <View style={styles.friendButtons}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: Colors.primary }]}
+                onPress={() => joinGroup(item.id, item.params?.groupId)}
+              >
+                <Text style={{ color: "white", fontSize: 13 }}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: "#ddd" }]}
+                onPress={() => declineJoinGroup(item.id)}
+              >
+                <Text style={{ color: "#333", fontSize: 13 }}>Decline</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={{ alignItems: "flex-end" }}>
