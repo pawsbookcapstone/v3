@@ -208,6 +208,8 @@ const Notifications = () => {
   };
 
   const navigate = (item: any) => {
+    if (item.type === "Group Invite") return;
+
     update("notifications", item.id).value({
       seen: true,
     });
@@ -274,11 +276,12 @@ const Notifications = () => {
       members: Number(group.members) + 1,
     });
   };
-  const declineJoinGroup = async (id: string) => {
+  const declineJoinGroup = async (id: string, groupId: string) => {
     set("notifications", id).value({
       accepted: false,
       seen: true,
     });
+    remove("groups", groupId, "invites", userId);
   };
 
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
@@ -332,7 +335,7 @@ const Notifications = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#ddd" }]}
-                onPress={() => declineJoinGroup(item.id)}
+                onPress={() => declineJoinGroup(item.id, item.params?.groupId)}
               >
                 <Text style={{ color: "#333", fontSize: 13 }}>Decline</Text>
               </TouchableOpacity>
