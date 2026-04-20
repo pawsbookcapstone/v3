@@ -64,10 +64,11 @@ interface Group {
   id: string;
   title: string;
   members: number;
-  profile: string;
+  profile?: string; // optional (can be missing/empty)
+  groupProfileImage?: string | null; // final resolved image for UI
   privacy: "Private" | "Public";
   description?: string;
-  // questions: string[];
+  images?: Record<string, string>;
 }
 
 interface PostDropdownProps {
@@ -170,7 +171,49 @@ export default function GroupProfile() {
 
   useOnFocusHook(() => {
     fetchAll();
+    fetchGroupData();
   }, []);
+
+  const fetchGroupData = async () => {
+    try {
+      const groupsSnap = await get("groups").where(
+        where(documentId(), "==", groupId),
+      );
+
+      if (groupsSnap.empty) {
+        console.warn("Group not found");
+        return;
+      }
+
+      const docSnap = groupsSnap.docs[0]; // ✅ FIX HERE
+      const groupData = docSnap.data() as Group;
+
+      // 🔥 resolve profile image
+      let groupProfileImage: string | null = null;
+
+      if (
+        typeof groupData.profile === "string" &&
+        groupData.profile.trim() !== ""
+      ) {
+        groupProfileImage = groupData.profile;
+      } else if (groupData.profile && typeof groupData.profile === "object") {
+        const values = Object.values(groupData.profile).filter(
+          (url) => typeof url === "string" && url.trim() !== "",
+        );
+
+        if (values.length > 0) {
+          groupProfileImage = values[0] as string;
+        }
+      }
+
+      setPageDetails({
+        ...groupData,
+        groupProfileImage,
+      });
+    } catch (error) {
+      console.error("Error fetching group data:", error);
+    }
+  };
 
   const fetchAll = async () => {
     try {
@@ -181,7 +224,7 @@ export default function GroupProfile() {
         return {
           id: doc.id,
           user: data.user,
-          profileImage: data.profileImage,
+          profileImage: data.profile,
           time: formatTimeAgo(data.time?.toDate()),
           content: data.content,
           images: data.images || null,
@@ -506,7 +549,14 @@ export default function GroupProfile() {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <View style={styles.imageContainer}>
-          <Image source={{ uri: imageUri }} style={styles.image} />
+          <Image
+            source={{
+              uri:
+                pageDetails?.groupProfileImage ||
+                "https://cdn-icons-png.flaticon.com/512/616/616408.png",
+            }}
+            style={styles.image}
+          />
         </View>
 
         <View style={styles.groupInfo}>

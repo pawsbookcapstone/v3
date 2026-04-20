@@ -21,6 +21,10 @@ export default function Layout() {
           name="group-invite-friends"
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+          name="users-joined-events"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="group-events" options={{ headerShown: false }} />
         <Stack.Screen name="share-post" options={{ headerShown: false }} />
         <Stack.Screen name="post-lost" options={{ headerShown: false }} />

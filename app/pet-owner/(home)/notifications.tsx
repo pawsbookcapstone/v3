@@ -247,47 +247,125 @@ const Notifications = () => {
     });
   };
 
+  // const joinGroup = async (id: string, groupId: string) => {
+  //   set("notifications", id).value({
+  //     accepted: true,
+  //     seen: true,
+  //   });
+
+  //   setData((prev) =>
+  //     prev.map((n) =>
+  //       n.id === id
+  //         ? {
+  //             ...n,
+  //             seen: true,
+  //             accepted: true,
+  //             description: "You accepted the group request",
+  //           }
+  //         : n,
+  //     ),
+  //   );
+
+  //   await set("groups", groupId, "members", userId).value({
+  //     userId,
+  //     joinedAt: serverTimestamp(),
+  //     userImagePath,
+  //     userName,
+  //     role: "member",
+  //   });
+
+  //   const sn = await find("groups", groupId);
+  //   const dt: any = sn.data();
+  //   const group = { members: dt?.members, title: dt?.title };
+
+  //   await set("users", userId, "joined-groups", groupId).value({
+  //     groupId,
+  //     groupName: group.title,
+  //     joinedAt: serverTimestamp(),
+  //   });
+
+  //   await update("groups", groupId).value({
+  //     members: Number(group.members) + 1,
+  //   });
+
+  //   router.push({
+  //     pathname: "/usable/group-profile",
+  //     params: {
+  //       id: groupId,
+  //       type: "JoinedGroup",
+  //     },
+  //   });
+  // };
+
+  const [processingInviteId, setProcessingInviteId] = useState<string | null>(
+    null,
+  );
+  const isLoading = (id: string) => processingInviteId === id;
   const joinGroup = async (id: string, groupId: string) => {
-    set("notifications", id).value({
-      accepted: true,
-      seen: true,
-    });
+    try {
+      setProcessingInviteId(id);
 
-    setData((prev) =>
-      prev.map((n) =>
-        n.id === id
-          ? {
-              ...n,
-              seen: true,
-              accepted: true,
-              description: "You accepted the group request",
-            }
-          : n,
-      ),
-    );
+      // 1️⃣ join group members
+      await set("groups", groupId, "members", userId).value({
+        userId,
+        joinedAt: serverTimestamp(),
+        userImagePath,
+        userName,
+        role: "member",
+      });
 
-    await set("groups", groupId, "members", userId).value({
-      userId,
-      joinedAt: serverTimestamp(),
-      userImagePath,
-      userName,
-      role: "member",
-    });
+      // 2️⃣ get group info
+      const sn = await find("groups", groupId);
+      const dt: any = sn.data();
+      const group = { members: dt?.members, title: dt?.title };
 
-    const sn = await find("groups", groupId);
-    const dt: any = sn.data();
-    const group = { members: dt?.members, title: dt?.title };
+      // 3️⃣ save user joined group
+      await set("users", userId, "joined-groups", groupId).value({
+        groupId,
+        groupName: group.title,
+        joinedAt: serverTimestamp(),
+      });
 
-    await set("users", userId, "joined-groups", groupId).value({
-      groupId,
-      groupName: group.title,
-      joinedAt: serverTimestamp(),
-    });
+      // 4️⃣ update group count
+      await update("groups", groupId).value({
+        members: Number(group.members) + 1,
+      });
 
-    await update("groups", groupId).value({
-      members: Number(group.members) + 1,
-    });
+      // 5️⃣ ONLY NOW mark notification as seen (DB success confirmed)
+      await set("notifications", id).value({
+        accepted: true,
+        seen: true,
+      });
+
+      // 6️⃣ update local UI AFTER DB success
+      setData((prev) =>
+        prev.map((n) =>
+          n.id === id
+            ? {
+                ...n,
+                seen: true,
+                accepted: true,
+                description: "You accepted the group request",
+              }
+            : n,
+        ),
+      );
+
+      // 7️⃣ navigate
+      router.push({
+        pathname: "/usable/group-profile",
+        params: {
+          id: groupId,
+          type: "JoinedGroup",
+        },
+      });
+    } catch (error) {
+      console.log("Join group error:", error);
+    } finally {
+      setProcessingInviteId(null);
+    }
   };
+
   const declineJoinGroup = async (id: string, groupId: string) => {
     set("notifications", id).value({
       accepted: false,
@@ -350,22 +428,53 @@ const Notifications = () => {
                 </TouchableOpacity>
               </View>
             )}
-          {item.type === "Group Invite" && !item.seen && (
-            <View style={styles.friendButtons}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: Colors.primary }]}
-                onPress={() => joinGroup(item.id, item.params?.groupId)}
-              >
-                <Text style={{ color: "white", fontSize: 13 }}>Accept</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: "#ddd" }]}
-                onPress={() => declineJoinGroup(item.id, item.params?.groupId)}
-              >
-                <Text style={{ color: "#333", fontSize: 13 }}>Decline</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+
+          {item.type === "Group Invite" &&
+            (!item.seen || isLoading(item.id)) && (
+              <View style={styles.friendButtons}>
+                {/* ACCEPT */}
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    {
+                      backgroundColor: Colors.primary,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    },
+                  ]}
+                  onPress={() => joinGroup(item.id, item.params?.groupId)}
+                  disabled={isLoading(item.id)}
+                >
+                  {isLoading(item.id) ? (
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      Please wait...
+                    </Text>
+                  ) : (
+                    <Text style={{ color: "white", fontSize: 13 }}>Accept</Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* DECLINE */}
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    {
+                      backgroundColor: "#ddd",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    },
+                  ]}
+                  onPress={() =>
+                    declineJoinGroup(item.id, item.params?.groupId)
+                  }
+                  disabled={isLoading(item.id)}
+                >
+                  <Text style={{ color: "#333", fontSize: 13 }}>
+                    {isLoading(item.id) ? "..." : "Decline"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
         </View>
 
         <View style={{ alignItems: "flex-end" }}>

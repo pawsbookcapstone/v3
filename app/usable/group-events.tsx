@@ -16,10 +16,12 @@ import { useOnFocusHook } from "@/hooks/onFocusHook";
 import HeaderWithActions from "@/shared/components/HeaderSet";
 import HeaderLayout from "@/shared/components/MainHeaderLayout";
 import { screens } from "@/shared/styles/styles";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const GroupEvents = () => {
   const { userId } = useAppContext();
   const { groupId, groupOwnerId, title } = useLocalSearchParams();
+  const [attendeeCount, setAttendeeCount] = useState(0);
 
   // ✅ STATIC EVENTS
   const [events, setEvents] = useState<any[]>([]);
@@ -104,8 +106,25 @@ const GroupEvents = () => {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text>{item.date}</Text>
-        <Text>{item.location}</Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <MaterialIcons name="description" size={16} color="gray" />
+          <Text style={{ marginLeft: 5 }}>{item.description}</Text>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <MaterialIcons name="event" size={16} color="gray" />
+          <Text style={{ marginLeft: 5 }}>{item.date}</Text>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <MaterialIcons name="location-on" size={16} color="gray" />
+          <Text style={{ marginLeft: 5 }}>{item.location}</Text>
+        </View>
+
+        {/* {isOwner && (
+     
+        )} */}
 
         <View style={styles.actions}>
           {/* <TouchableOpacity
@@ -119,22 +138,52 @@ const GroupEvents = () => {
               style={styles.btn}
               onPress={() => joinEvent(item.id, !isJoined)}
             >
-              <Text>{isJoined ? "Left" : "Join"}</Text>
+              <Text style={styles.btntext}>{isJoined ? "Joined" : "Join"}</Text>
             </TouchableOpacity>
           ) : (
             <>
               <TouchableOpacity
-                style={styles.btn}
+                style={[styles.btn, styles.editBtn]}
                 onPress={() => editEvent(item.id)}
               >
-                <Text>Edit</Text>
+                <MaterialIcons name="edit" size={16} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.btn}
+                style={[styles.btn, styles.deleteBtn]}
                 onPress={() => deleteEvent(item.id)}
               >
-                <Text>Delete</Text>
+                <MaterialIcons name="delete" size={16} color="#fff" />
               </TouchableOpacity>
+
+              <View style={{ flexDirection: "row" }}>
+                <TouchableOpacity
+                  style={[
+                    styles.btn,
+                    {
+                      backgroundColor: "#6c5ce7",
+                      flexDirection: "row",
+                      alignItems: "center",
+                    },
+                  ]}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/usable/users-joined-events",
+                      params: {
+                        eventId: item.id,
+                        title: item.title,
+                        description: item.description,
+                        location: item.location,
+                        date: item.date,
+                      },
+                    })
+                  }
+                >
+                  <MaterialIcons name="groups" size={16} color="#fff" />
+                  {/* <Text style={{ color: "#fff", marginLeft: 5 }}>
+                    View Joined Users
+                  </Text> */}
+                </TouchableOpacity>
+              </View>
             </>
           )}
         </View>
@@ -207,9 +256,33 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   btn: {
-    backgroundColor: Colors.buttonlogin,
-    padding: 8,
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+
+    backgroundColor: "#22C55E", // default professional blue
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    flexDirection: "row",
+
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  btntext: {
+    color: "white",
+  },
+
+  editBtn: {
+    backgroundColor: "#38BDF8",
+  },
+
+  deleteBtn: {
+    backgroundColor: "#EF4444",
   },
   createBtn: {
     backgroundColor: Colors.primary,
