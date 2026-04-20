@@ -29,6 +29,7 @@ const descriptions = {
   "Sent a Image": "Sent you an image",
   "Sent a Video": "Sent you an video",
   Share: "Shared your post",
+  "Group Invite": "Invites you to a group",
 };
 
 export const useAppContext = () => {

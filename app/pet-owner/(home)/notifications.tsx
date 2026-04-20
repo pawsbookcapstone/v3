@@ -253,6 +253,19 @@ const Notifications = () => {
       seen: true,
     });
 
+    setData((prev) =>
+      prev.map((n) =>
+        n.id === id
+          ? {
+              ...n,
+              seen: true,
+              accepted: true,
+              description: "You accepted the group request",
+            }
+          : n,
+      ),
+    );
+
     await set("groups", groupId, "members", userId).value({
       userId,
       joinedAt: serverTimestamp(),
@@ -281,6 +294,19 @@ const Notifications = () => {
       seen: true,
     });
     remove("groups", groupId, "invites", userId);
+
+    setData((prev) =>
+      prev.map((n) =>
+        n.id === id
+          ? {
+              ...n,
+              seen: true,
+              accepted: false,
+              description: "You declined the group request",
+            }
+          : n,
+      ),
+    );
   };
 
   const renderItem = ({ item }: { item: (typeof data)[0] }) => (
