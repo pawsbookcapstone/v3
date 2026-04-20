@@ -1,6 +1,5 @@
 import { useAppContext } from "@/AppsProvider";
 import {
-  collectionName,
   find,
   get,
   remove,
@@ -262,9 +261,9 @@ const Notifications = () => {
       role: "member",
     });
 
-    const group: any = await collectionName("groups", groupId).getMapped(
-      (id, data) => ({ members: data.members, title: data.title }),
-    );
+    const sn = await find("groups", groupId);
+    const dt: any = sn.data();
+    const group = { members: dt?.members, title: dt?.title };
 
     await set("users", userId, "joined-groups", groupId).value({
       groupId,
