@@ -88,6 +88,15 @@ const GroupEvents = () => {
     setEvents((prev) => prev.filter((event) => event.id !== eventId));
   };
 
+  const editEvent = (eventId: string) => {
+    router.push({
+      pathname: "/usable/edit-group-event",
+      params: {
+        groupEventId: eventId,
+      },
+    });
+  };
+
   const renderItem = ({ item }: any) => {
     const isJoined = item.attendees.includes(userId);
     const isSaved = false;
@@ -98,30 +107,37 @@ const GroupEvents = () => {
         <Text>{item.date}</Text>
         <Text>{item.location}</Text>
 
-        {!isOwner ? (
-          <View style={styles.actions}>
+        <View style={styles.actions}>
+          {/* <TouchableOpacity
+              style={styles.btn}
+              onPress={() => saveEvent(item.id)}
+            >
+              <Text>{isSaved ? "Saved" : "Save"}</Text>
+            </TouchableOpacity> */}
+          {!isOwner ? (
             <TouchableOpacity
               style={styles.btn}
               onPress={() => joinEvent(item.id, !isJoined)}
             >
               <Text>{isJoined ? "Left" : "Join"}</Text>
             </TouchableOpacity>
-
-            {/* <TouchableOpacity
-              style={styles.btn}
-              onPress={() => saveEvent(item.id)}
-            >
-              <Text>{isSaved ? "Saved" : "Save"}</Text>
-            </TouchableOpacity> */}
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={[styles.btn, { width: 60 }]}
-            onPress={() => deleteEvent(item.id)}
-          >
-            <Text>Delete</Text>
-          </TouchableOpacity>
-        )}
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.btn}
+                onPress={() => editEvent(item.id)}
+              >
+                <Text>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.btn}
+                onPress={() => deleteEvent(item.id)}
+              >
+                <Text>Delete</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     );
   };

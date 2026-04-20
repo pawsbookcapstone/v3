@@ -14,6 +14,10 @@ export default function Layout() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="edit-group-event"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="group-invite-friends"
           options={{ headerShown: false }}
         />
